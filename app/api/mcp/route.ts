@@ -138,7 +138,7 @@ const handler = createMcpHandler(
     // Read tool: Get file by route or search
     server.tool(
       'read',
-      'Read content from the AI wiki by route path. If the exact route is not found, performs a fulltext search and returns the top 10 matching results with snippets.',
+      'Read content from the AI wiki by route path. If the exact route is not found, checks for child routes (like a directory listing). If no children exist, performs a fulltext search and returns the top 10 matching results with snippets.',
       {
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
@@ -182,7 +182,42 @@ const handler = createMcpHandler(
             };
           }
 
-          // No exact match found, perform fulltext search
+          // No exact match found, check for child routes
+          const routePrefix = route.endsWith('/') ? route : `${route}/`;
+          const { data: childRoutes, error: childError } = await supabase
+            .from('wiki_files_index')
+            .select('route, file_name')
+            .like('route', `${routePrefix}%`)
+            .order('route');
+
+          if (!childError && childRoutes && childRoutes.length > 0) {
+            // Found child routes, return them as a directory listing
+            const childList = childRoutes
+              .map((child) => {
+                // Get the immediate child part (not nested grandchildren)
+                const relativePath = child.route.substring(routePrefix.length);
+                const firstSegment = relativePath.split('/')[0];
+                return firstSegment;
+              })
+              .filter((value, index, self) => self.indexOf(value) === index) // unique values
+              .map((childName) => {
+                const childRoute = `${routePrefix}${childName}`;
+                const matchingRoute = childRoutes.find(r => r.route === childRoute || r.route.startsWith(`${childRoute}/`));
+                return `- ${childRoute}${matchingRoute?.route === childRoute ? ` (${matchingRoute.file_name})` : ' (directory)'}`;
+              })
+              .join('\n');
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `# ${route}\n\nNo file exists at this route, but found ${childRoutes.length} child route(s):\n\n${childList}\n\nUse the exact route path with the 'read' tool to view content.`,
+                },
+              ],
+            };
+          }
+
+          // No children found, perform fulltext search
           const { data: searchResults, error: searchError } = await supabase
             .from('wiki_files_index')
             .select('file_id, file_name, route')
