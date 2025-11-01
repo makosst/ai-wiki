@@ -4,134 +4,124 @@ import { supabase } from '@/lib/supabase';
 
 const handler = createMcpHandler(
   (server) => {
-    // Upload tool: Upload files to Supabase storage and return the file ID
-    server.tool(
-      'upload',
-      'Upload a file to the AI wiki storage. Returns the file ID that can be used with the contribute tool to map it to a route.',
-      {
-        fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
-        content: z.string().describe('The file content as a string'),
-        contentType: z.string().optional().describe('MIME type of the file (e.g., "text/markdown", "text/plain"). Defaults to "text/plain"'),
-      },
-      async ({ fileName, content, contentType = 'text/plain' }) => {
-        try {
-          const fileId = crypto.randomUUID();
-          const filePath = `${fileId}/${fileName}`;
+    const singleContributionSchema = z.object({
+      fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
+      content: z.string().describe('The file content as a string'),
+      route: z.string().describe('The route path for this content (e.g., "ui/shadcn/installation", "backend/nodejs/express")'),
+      contentType: z
+        .string()
+        .optional()
+        .describe('MIME type of the file (e.g., "text/markdown"). Defaults to "text/plain"'),
+    });
 
-          // Upload file to Supabase storage
-          const { error: uploadError } = await supabase.storage
-            .from('ai-wiki-storage')
-            .upload(filePath, content, {
-              contentType,
-              upsert: false,
-            });
-
-          if (uploadError) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error uploading file: ${uploadError.message}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `File uploaded successfully!\n\nFile ID: ${fileId}\nFile Name: ${fileName}\nPath: ${filePath}\n\nUse this file ID with the 'contribute' tool to map it to a route.`,
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              },
-            ],
-            isError: true,
-          };
-        }
-      },
+    const contributeSchema = singleContributionSchema.or(
+      z.object({
+        contributions: z
+          .array(singleContributionSchema)
+          .min(1)
+          .describe('List of contributions to upload and map in a single call.'),
+      }),
     );
 
-    // Contribute tool: Map a file ID to a route
+    // Contribute tool: Upload files and map them to routes. Supports single or batch contributions.
     server.tool(
       'contribute',
-      'Map an uploaded file to a route path in the AI wiki. The route is like a file path (e.g., "ui/shadcn/installation" or "backend/supabase/auth"). This allows the file to be found via the read tool.',
-      {
-        fileId: z.string().describe('The file ID returned from the upload tool'),
-        route: z.string().describe('The route path for this content (e.g., "ui/shadcn/installation", "backend/nodejs/express")'),
-        fileName: z.string().describe('The original file name for reference'),
-      },
-      async ({ fileId, route, fileName }) => {
-        try {
-          // Verify the file exists in storage
-          const filePath = `${fileId}/${fileName}`;
-          const { data: fileData, error: fileError } = await supabase.storage
-            .from('ai-wiki-storage')
-            .list(fileId);
+      'Upload content directly to the AI wiki and map it to one or more routes. Provide either a single contribution object or an array under "contributions".',
+      { contributions: z.array(singleContributionSchema).min(1).describe('List of contributions to upload and map in a single call.') },
+      async ({ contributions }) => {
+        const results: Array<{ success: boolean; route: string; fileId?: string; fileName?: string; message: string }> = [];
 
-          if (fileError || !fileData || fileData.length === 0) {
-            return {
-              content: [
+        for (const contribution of contributions) {
+          const { fileName, content, route, contentType = 'text/plain' } = contribution;
+
+          try {
+            const fileId = crypto.randomUUID();
+            const filePath = `${fileId}/${fileName}`;
+
+            // Upload the file content to Supabase storage
+            const { error: uploadError } = await supabase.storage
+              .from('ai-wiki-storage')
+              .upload(filePath, content, {
+                contentType,
+                upsert: false,
+              });
+
+            if (uploadError) {
+              results.push({
+                success: false,
+                route,
+                fileName,
+                message: `Upload failed for route "${route}": ${uploadError.message}`,
+              });
+              continue;
+            }
+
+            // Map the uploaded file to the provided route
+            const { error: insertError } = await supabase
+              .from('wiki_files_index')
+              .upsert(
                 {
-                  type: 'text',
-                  text: `Error: File with ID ${fileId} not found in storage. Please upload the file first using the 'upload' tool.`,
+                  route,
+                  file_id: fileId,
+                  file_name: fileName,
+                  updated_at: new Date().toISOString(),
                 },
-              ],
-              isError: true,
-            };
-          }
+                {
+                  onConflict: 'route',
+                },
+              );
 
-          // Insert or update the route mapping
-          const { error: insertError } = await supabase
-            .from('wiki_files_index')
-            .upsert({
+            if (insertError) {
+              results.push({
+                success: false,
+                route,
+                fileName,
+                message: `Index update failed for route "${route}": ${insertError.message}`,
+              });
+              continue;
+            }
+
+            results.push({
+              success: true,
               route,
-              file_id: fileId,
-              file_name: fileName,
-              updated_at: new Date().toISOString(),
-            }, {
-              onConflict: 'route',
+              fileId,
+              fileName,
+              message: `Route "${route}" mapped to file ID ${fileId}`,
             });
-
-          if (insertError) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error mapping route: ${insertError.message}`,
-                },
-              ],
-              isError: true,
-            };
+          } catch (error) {
+            results.push({
+              success: false,
+              route,
+              fileName,
+              message: `Unexpected error for route "${route}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+            });
           }
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Successfully mapped route "${route}" to file ID ${fileId}!\n\nYou can now read this content using the 'read' tool with the route: "${route}"`,
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              },
-            ],
-            isError: true,
-          };
         }
+
+        const successCount = results.filter((result) => result.success).length;
+        const failureCount = results.length - successCount;
+
+        const summaryLines = [
+          `Processed ${results.length} contribution${results.length === 1 ? '' : 's'}.`,
+          `Successful: ${successCount}.`,
+          `Failed: ${failureCount}.`,
+          '',
+          ...results.map((result) =>
+            result.success
+              ? `SUCCESS - ${result.message} (file name: ${result.fileName})`
+              : `ERROR - ${result.message}`,
+          ),
+        ];
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: summaryLines.join('\n'),
+            },
+          ],
+          isError: failureCount === results.length && results.length > 0,
+        };
       },
     );
 
@@ -185,11 +175,12 @@ const handler = createMcpHandler(
           // No exact match found, check for child routes
           // First try: exact prefix match
           const routePrefix = route.endsWith('/') ? route : `${route}/`;
-          let { data: childRoutes, error: childError } = await supabase
+          const { data: initialChildRoutes, error: childError } = await supabase
             .from('wiki_files_index')
             .select('route, file_name')
             .like('route', `${routePrefix}%`)
             .order('route');
+          let childRoutes = initialChildRoutes;
 
           // Second try: fuzzy prefix match (e.g., "ui/aceternity" matches "ui/aceternityui/...")
           if ((!childRoutes || childRoutes.length === 0) && !route.endsWith('/')) {
@@ -203,7 +194,7 @@ const handler = createMcpHandler(
             // If fuzzy results exist, find the common parent path
             if (fuzzyResults && fuzzyResults.length > 0) {
               // Find the longest common prefix among all fuzzy results
-              let commonPrefixParts: string[] = [];
+              const commonPrefixParts: string[] = [];
               const firstParts = fuzzyResults[0].route.split('/');
 
               for (let i = 0; i < firstParts.length; i++) {
