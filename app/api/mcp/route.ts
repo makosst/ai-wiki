@@ -183,23 +183,88 @@ const handler = createMcpHandler(
           }
 
           // No exact match found, check for child routes
+          // First try: exact prefix match
           const routePrefix = route.endsWith('/') ? route : `${route}/`;
-          const { data: childRoutes, error: childError } = await supabase
+          let { data: childRoutes, error: childError } = await supabase
             .from('wiki_files_index')
             .select('route, file_name')
             .like('route', `${routePrefix}%`)
             .order('route');
 
+          // Second try: fuzzy prefix match (e.g., "ui/aceternity" matches "ui/aceternityui/...")
+          if ((!childRoutes || childRoutes.length === 0) && !route.endsWith('/')) {
+            const fuzzyPattern = `${route}%`;
+            const { data: fuzzyResults } = await supabase
+              .from('wiki_files_index')
+              .select('route, file_name')
+              .ilike('route', fuzzyPattern)
+              .order('route');
+
+            // If fuzzy results exist, find the common parent path
+            if (fuzzyResults && fuzzyResults.length > 0) {
+              // Find the longest common prefix among all fuzzy results
+              let commonPrefixParts: string[] = [];
+              const firstParts = fuzzyResults[0].route.split('/');
+
+              for (let i = 0; i < firstParts.length; i++) {
+                const segment = firstParts[i];
+                if (fuzzyResults.every(r => r.route.split('/')[i] === segment)) {
+                  commonPrefixParts.push(segment);
+                } else {
+                  break;
+                }
+              }
+
+              const commonPrefix = commonPrefixParts.join('/');
+
+              // If we found a common prefix different from search term, navigate to it
+              if (commonPrefix && commonPrefix !== route) {
+                // Get children of the common prefix
+                const { data: suggestedChildren } = await supabase
+                  .from('wiki_files_index')
+                  .select('route, file_name')
+                  .like('route', `${commonPrefix}/%`)
+                  .order('route');
+
+                if (suggestedChildren && suggestedChildren.length > 0) {
+                  childRoutes = suggestedChildren;
+                  // Update the display to show we're navigating to the closest match
+                  const childList = suggestedChildren
+                    .map((child) => {
+                      const relativePath = child.route.substring(commonPrefix.length + 1);
+                      const firstSegment = relativePath.split('/')[0];
+                      return firstSegment;
+                    })
+                    .filter((value, index, self) => self.indexOf(value) === index)
+                    .map((childName) => {
+                      const childRoute = `${commonPrefix}/${childName}`;
+                      const matchingRoute = suggestedChildren.find(r => r.route === childRoute || r.route.startsWith(`${childRoute}/`));
+                      return `- ${childRoute}${matchingRoute?.route === childRoute ? ` (${matchingRoute.file_name})` : ' (directory)'}`;
+                    })
+                    .join('\n');
+
+                  return {
+                    content: [
+                      {
+                        type: 'text',
+                        text: `# ${commonPrefix}\n\n⚠️ No exact match for "${route}", showing closest match: "${commonPrefix}"\n\nFound ${suggestedChildren.length} child route(s):\n\n${childList}\n\nUse the exact route path with the 'read' tool to view content.`,
+                      },
+                    ],
+                  };
+                }
+              }
+            }
+          }
+
+          // If we found exact children, show them
           if (!childError && childRoutes && childRoutes.length > 0) {
-            // Found child routes, return them as a directory listing
             const childList = childRoutes
               .map((child) => {
-                // Get the immediate child part (not nested grandchildren)
                 const relativePath = child.route.substring(routePrefix.length);
                 const firstSegment = relativePath.split('/')[0];
                 return firstSegment;
               })
-              .filter((value, index, self) => self.indexOf(value) === index) // unique values
+              .filter((value, index, self) => self.indexOf(value) === index)
               .map((childName) => {
                 const childRoute = `${routePrefix}${childName}`;
                 const matchingRoute = childRoutes.find(r => r.route === childRoute || r.route.startsWith(`${childRoute}/`));
@@ -217,26 +282,49 @@ const handler = createMcpHandler(
             };
           }
 
-          // No children found, perform fulltext search
-          const { data: searchResults, error: searchError } = await supabase
+          // No children found, perform fuzzy search
+          // First try: case-insensitive substring matching (most flexible)
+          const searchPattern = `%${route}%`;
+          let { data: searchResults } = await supabase
             .from('wiki_files_index')
             .select('file_id, file_name, route')
-            .textSearch('route_search', route, {
-              type: 'websearch',
-              config: 'english',
-            })
+            .ilike('route', searchPattern)
             .limit(10);
 
-          if (searchError) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error performing search: ${searchError.message}`,
-                },
-              ],
-              isError: true,
-            };
+          // Second try: if no results, try fulltext search with prefix matching
+          if (!searchResults || searchResults.length === 0) {
+            // Convert route to prefix search tokens (each word becomes a prefix)
+            const searchTokens = route
+              .replace(/\//g, ' ')
+              .split(/\s+/)
+              .filter(token => token.length > 0)
+              .map(token => `${token}:*`)
+              .join(' & ');
+
+            const { data: ftsResults } = await supabase
+              .from('wiki_files_index')
+              .select('file_id, file_name, route')
+              .textSearch('route_search', searchTokens, {
+                type: 'plain',
+                config: 'english',
+              })
+              .limit(10);
+
+            searchResults = ftsResults;
+          }
+
+          // Third try: if still no results, try websearch (most lenient)
+          if (!searchResults || searchResults.length === 0) {
+            const { data: webResults } = await supabase
+              .from('wiki_files_index')
+              .select('file_id, file_name, route')
+              .textSearch('route_search', route, {
+                type: 'websearch',
+                config: 'english',
+              })
+              .limit(10);
+
+            searchResults = webResults;
           }
 
           if (!searchResults || searchResults.length === 0) {
