@@ -128,7 +128,7 @@ const handler = createMcpHandler(
     // Read tool: Get file by route or search
     server.tool(
       'read',
-      'Read content from the AI wiki by route path. If the exact route is not found, checks for child routes (like a directory listing). If no children exist, performs a fulltext search and returns the top 10 matching results with snippets.',
+      'Read content from the AI wiki by route path. Always start with reading by the library name.',
       {
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
