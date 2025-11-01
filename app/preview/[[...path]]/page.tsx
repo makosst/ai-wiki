@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image';
 
 interface PageProps {
   params: Promise<{
@@ -161,11 +162,34 @@ ${createAsciiHeader('ERROR')}
 File could not be retrieved: ${fileError?.message || 'Unknown error'}
 `;
 
-      return (
-        <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
-          <ReactMarkdown>{errorContent}</ReactMarkdown>
+    return (
+      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <a
+            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center"
+          >
+            <Image
+              src="https://cursor.com/deeplink/mcp-install-dark.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="dark:hidden"
+            />
+            <Image
+              src="https://cursor.com/deeplink/mcp-install.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="hidden dark:block"
+            />
+          </a>
         </div>
-      );
+        <ReactMarkdown>{errorContent}</ReactMarkdown>
+      </div>
+    );
     }
 
     const fileContent = await fileData.text();
@@ -194,7 +218,30 @@ ${nav}
 `;
 
     return (
-      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <a
+            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center"
+          >
+            <Image
+              src="https://cursor.com/deeplink/mcp-install-dark.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="dark:hidden"
+            />
+            <Image
+              src="https://cursor.com/deeplink/mcp-install.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="hidden dark:block"
+            />
+          </a>
+        </div>
         <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
@@ -285,7 +332,30 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
 `;
 
     return (
-      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <a
+            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center"
+          >
+            <Image
+              src="https://cursor.com/deeplink/mcp-install-dark.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="dark:hidden"
+            />
+            <Image
+              src="https://cursor.com/deeplink/mcp-install.svg"
+              alt="Install MCP Server"
+              width={200}
+              height={48}
+              className="hidden dark:block"
+            />
+          </a>
+        </div>
         <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
