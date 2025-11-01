@@ -1,6 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 
 interface PageProps {
@@ -9,11 +7,130 @@ interface PageProps {
   }>;
 }
 
-interface RouteInfo {
-  route: string;
-  file_name: string;
-  file_id: string;
-  updated_at: string;
+function wrapInAsciiFrame(content: string, maxWidth: number = 100): string {
+  const lines = content.split('\n');
+  const width = maxWidth;
+  const maxLineLength = width - 4; // Account for "║ " and " ║"
+
+  const topBorder = '╔' + '═'.repeat(width - 2) + '╗';
+  const bottomBorder = '╚' + '═'.repeat(width - 2) + '╝';
+
+  // Wrap long lines
+  const wrappedLines: string[] = [];
+  lines.forEach(line => {
+    if (line.length <= maxLineLength) {
+      wrappedLines.push(line);
+    } else {
+      // Split long lines into chunks
+      let remaining = line;
+      while (remaining.length > 0) {
+        if (remaining.length <= maxLineLength) {
+          wrappedLines.push(remaining);
+          break;
+        }
+        // Try to break at a space
+        let breakPoint = maxLineLength;
+        const lastSpace = remaining.lastIndexOf(' ', maxLineLength);
+        if (lastSpace > maxLineLength * 0.7) { // Only break at space if it's not too far back
+          breakPoint = lastSpace;
+        }
+        wrappedLines.push(remaining.substring(0, breakPoint));
+        remaining = remaining.substring(breakPoint).trimStart();
+      }
+    }
+  });
+
+  const paddedLines = wrappedLines.map(line => {
+    const padding = Math.max(0, maxLineLength - line.length);
+    return '║ ' + line + ' '.repeat(padding) + ' ║';
+  });
+
+  return [topBorder, ...paddedLines, bottomBorder].join('\n');
+}
+
+// Helper to calculate display length (ignoring markdown link syntax)
+function getDisplayLength(text: string): number {
+  // Remove markdown link syntax [text](url) and just count the display text
+  return text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').length;
+}
+
+// Helper to wrap a line with markdown links
+function wrapLineWithMarkdown(line: string, maxLength: number): string[] {
+  const displayLength = getDisplayLength(line);
+
+  if (displayLength <= maxLength) {
+    return [line];
+  }
+
+  // If line is too long, we need to wrap it
+  // For simplicity, break at spaces while trying to keep markdown links together
+  const result: string[] = [];
+  let currentLine = '';
+  let currentDisplayLength = 0;
+
+  // Split by spaces but keep markdown links together
+  const parts = line.split(' ');
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const partDisplayLength = getDisplayLength(part);
+    const spaceNeeded = currentLine.length > 0 ? 1 : 0; // For the space
+
+    if (currentDisplayLength + spaceNeeded + partDisplayLength <= maxLength) {
+      if (currentLine.length > 0) {
+        currentLine += ' ';
+        currentDisplayLength += 1;
+      }
+      currentLine += part;
+      currentDisplayLength += partDisplayLength;
+    } else {
+      // Start a new line
+      if (currentLine.length > 0) {
+        result.push(currentLine);
+      }
+      currentLine = part;
+      currentDisplayLength = partDisplayLength;
+    }
+  }
+
+  if (currentLine.length > 0) {
+    result.push(currentLine);
+  }
+
+  return result.length > 0 ? result : [line];
+}
+
+function renderFramedMarkdown(lines: string[], maxWidth: number = 96): string {
+  const width = maxWidth;
+  const maxLineLength = width - 4; // Account for "║ " and " ║"
+
+  const topBorder = '╔' + '═'.repeat(width - 2) + '╗';
+  const bottomBorder = '╚' + '═'.repeat(width - 2) + '╝';
+
+  const framedLines: string[] = [topBorder];
+
+  lines.forEach(line => {
+    const wrappedLines = wrapLineWithMarkdown(line, maxLineLength);
+
+    wrappedLines.forEach(wrappedLine => {
+      const displayLength = getDisplayLength(wrappedLine);
+      const padding = Math.max(0, maxLineLength - displayLength);
+      framedLines.push('║ ' + wrappedLine + ' '.repeat(padding) + ' ║');
+    });
+  });
+
+  framedLines.push(bottomBorder);
+  return framedLines.join('\n');
+}
+
+function createAsciiHeader(title: string): string {
+  const width = Math.max(title.length + 4, 60);
+  const topBorder = '┌' + '─'.repeat(width - 2) + '┐';
+  const bottomBorder = '└' + '─'.repeat(width - 2) + '┘';
+  const padding = Math.max(0, width - 4 - title.length);
+  const titleLine = '│ ' + title + ' '.repeat(padding) + ' │';
+
+  return [topBorder, titleLine, bottomBorder].join('\n');
 }
 
 export default async function PreviewPage({ params }: PageProps) {
@@ -36,53 +153,49 @@ export default async function PreviewPage({ params }: PageProps) {
       .download(filePath);
 
     if (fileError || !fileData) {
+      const errorContent = `
+[← Root](/preview)
+
+${createAsciiHeader('ERROR')}
+
+File could not be retrieved: ${fileError?.message || 'Unknown error'}
+`;
+
       return (
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-4">
-            <Link href="/preview" className="text-blue-600 hover:underline">
-              ← Back to root
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold mb-4 text-red-600">Error</h1>
-          <p>File could not be retrieved: {fileError?.message || 'Unknown error'}</p>
+        <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+          <ReactMarkdown>{errorContent}</ReactMarkdown>
         </div>
       );
     }
 
     const fileContent = await fileData.text();
 
+    // Build navigation
+    let nav = '[← Root](/preview)';
+    if (pathSegments.length > 1) {
+      nav += ` | [↑ Up](/preview/${pathSegments.slice(0, -1).join('/')})`;
+    }
+
+    const framedContent = wrapInAsciiFrame(fileContent, 96);
+
+    const markdownContent = `
+${nav}
+
+${createAsciiHeader(`📄 ${route || 'Root'}`)}
+
+File: ${indexData.file_name}
+Updated: ${new Date(indexData.updated_at).toLocaleDateString()}
+
+\`\`\`
+${framedContent}
+\`\`\`
+
+${nav}
+`;
+
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-4">
-          <Link href="/preview" className="text-blue-600 hover:underline">
-            ← Back to root
-          </Link>
-          {pathSegments.length > 1 && (
-            <span className="mx-2">|</span>
-          )}
-          {pathSegments.length > 1 && (
-            <Link
-              href={`/preview/${pathSegments.slice(0, -1).join('/')}`}
-              className="text-blue-600 hover:underline"
-            >
-              ← Up one level
-            </Link>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="mb-4 pb-4 border-b">
-            <h1 className="text-3xl font-bold mb-2">{route || 'Root'}</h1>
-            <p className="text-sm text-gray-600">File: {indexData.file_name}</p>
-            <p className="text-sm text-gray-500">
-              Last updated: {new Date(indexData.updated_at).toLocaleDateString()}
-            </p>
-          </div>
-
-          <div className="prose prose-lg max-w-none">
-            <ReactMarkdown>{fileContent}</ReactMarkdown>
-          </div>
-        </div>
+      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+        <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
   }
@@ -120,79 +233,76 @@ export default async function PreviewPage({ params }: PageProps) {
       a[0].localeCompare(b[0])
     );
 
+    // Build navigation
+    let nav = '';
+    if (route.length > 0) {
+      nav = '[← Root](/preview)';
+      if (pathSegments.length > 1) {
+        nav += ` | [↑ Up](/preview/${pathSegments.slice(0, -1).join('/')})`;
+      }
+      nav += '\n\n';
+    }
+
+    // Build directory listing - create framed content with markdown links
+    const listingLines = sortedChildren.map(([name, info]) => {
+      const icon = info.file_name ? '[FILE]' : '[DIR] ';
+      const fileName = info.file_name ? ` (${info.file_name})` : '';
+      return `${icon} [${name}](/preview/${info.route})${fileName}`;
+    });
+
+    // If we're at the root, also show recently added files
+    let recentlyAddedSection = '';
+    if (route.length === 0) {
+      const { data: recentFiles } = await supabase
+        .from('wiki_files_index')
+        .select('route, file_name, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+      if (recentFiles && recentFiles.length > 0) {
+        const recentLines = recentFiles.map(file => {
+          const date = new Date(file.updated_at).toLocaleDateString();
+          return `[${file.route}](/preview/${file.route}) - ${file.file_name} (${date})`;
+        });
+
+        recentlyAddedSection = `
+
+${createAsciiHeader('📅 RECENTLY ADDED')}
+
+Last ${recentFiles.length} updated files
+
+${renderFramedMarkdown(recentLines)}
+`;
+      }
+    }
+
+    const markdownContent = `
+${nav}${createAsciiHeader(`📁 ${route || 'AI WIKI - ROOT'}`)}
+
+Directory listing - ${sortedChildren.length} item(s)
+
+${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
+`;
+
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-4">
-          {route.length > 0 && (
-            <>
-              <Link href="/preview" className="text-blue-600 hover:underline">
-                ← Back to root
-              </Link>
-              {pathSegments.length > 1 && (
-                <>
-                  <span className="mx-2">|</span>
-                  <Link
-                    href={`/preview/${pathSegments.slice(0, -1).join('/')}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    ← Up one level
-                  </Link>
-                </>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold mb-4">
-            {route || 'AI Wiki - Root'}
-          </h1>
-          <p className="text-gray-600 mb-6">
-            {sortedChildren.length} item(s) in this directory
-          </p>
-
-          <div className="space-y-2">
-            {sortedChildren.map(([name, info]) => (
-              <Link
-                key={info.route}
-                href={`/preview/${info.route}`}
-                className="block p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-500 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-medium text-lg">
-                      {info.file_name ? '📄' : '📁'} {name}
-                    </span>
-                    {info.file_name && (
-                      <span className="ml-3 text-sm text-gray-500">
-                        ({info.file_name})
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-gray-400">→</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+        <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
   }
 
   // Nothing found
+  const markdownContent = `
+[← Root](/preview)
+
+${createAsciiHeader('404 - NOT FOUND')}
+
+No files or directories found at route: ${route || '(root)'}
+`;
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-4">
-        <Link href="/preview" className="text-blue-600 hover:underline">
-          ← Back to root
-        </Link>
-      </div>
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold mb-4 text-gray-700">No Content Found</h1>
-        <p className="text-gray-600">
-          No files or directories found at route: <code className="bg-gray-100 px-2 py-1 rounded">{route || '(root)'}</code>
-        </p>
-      </div>
+    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
+      <ReactMarkdown>{markdownContent}</ReactMarkdown>
     </div>
   );
 }

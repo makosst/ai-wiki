@@ -120,3 +120,37 @@
     @apply bg-background text-foreground;
   }
 }
+
+.preview-container {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.preview-container a {
+  color: #0066cc;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.preview-container a:hover {
+  text-decoration: underline;
+}
+
+.preview-container p {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+}
+
+.preview-container pre {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre;
+  overflow-x: auto;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.preview-container code {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre;
+  background: transparent;
+}
