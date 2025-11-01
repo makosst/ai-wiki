@@ -133,13 +133,57 @@ const handler = createMcpHandler(
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
       async ({ route }) => {
+        // Helper function to generate route variants (with/without .md extension)
+        const getRouteVariants = (searchRoute: string): string[] => {
+          const variants = [searchRoute];
+          if (searchRoute.endsWith('.md')) {
+            // If ends with .md, also try without it
+            variants.push(searchRoute.slice(0, -3));
+          } else {
+            // If doesn't end with .md, also try with it
+            variants.push(`${searchRoute}.md`);
+          }
+          return variants;
+        };
+
         try {
-          // First, try to find exact route match
-          const { data: indexData, error: indexError } = await supabase
-            .from('wiki_files_index')
-            .select('file_id, file_name, route')
-            .eq('route', route)
-            .single();
+          // First, try to find exact route match (check both with/without .md)
+          const routeVariants = getRouteVariants(route);
+          let indexData = null;
+          let indexError = null;
+
+          for (const variant of routeVariants) {
+            const result = await supabase
+              .from('wiki_files_index')
+              .select('file_id, file_name, route')
+              .eq('route', variant)
+              .single();
+            
+            if (!result.error && result.data) {
+              indexData = result.data;
+              break;
+            }
+            if (!indexData) {
+              indexError = result.error;
+            }
+          }
+
+          // Also check file_name field if route doesn't match
+          if (!indexData) {
+            const fileNameVariants = getRouteVariants(route);
+            for (const variant of fileNameVariants) {
+              const result = await supabase
+                .from('wiki_files_index')
+                .select('file_id, file_name, route')
+                .eq('file_name', variant)
+                .single();
+              
+              if (!result.error && result.data) {
+                indexData = result.data;
+                break;
+              }
+            }
+          }
 
           if (!indexError && indexData) {
             // Found exact match, retrieve the file content
@@ -275,12 +319,41 @@ const handler = createMcpHandler(
 
           // No children found, perform fuzzy search
           // First try: case-insensitive substring matching (most flexible)
-          const searchPattern = `%${route}%`;
-          let { data: searchResults } = await supabase
-            .from('wiki_files_index')
-            .select('file_id, file_name, route')
-            .ilike('route', searchPattern)
-            .limit(10);
+          // Search both route and file_name fields with extension variants
+          const searchRouteVariants = getRouteVariants(route);
+          const searchPatterns = searchRouteVariants.map(v => `%${v}%`);
+          
+          // Try searching route field with all variants
+          let searchResults: Array<{ file_id: string; file_name: string; route: string }> | null = null;
+          
+          for (const pattern of searchPatterns) {
+            const { data: routeResults } = await supabase
+              .from('wiki_files_index')
+              .select('file_id, file_name, route')
+              .ilike('route', pattern)
+              .limit(10);
+            
+            if (routeResults && routeResults.length > 0) {
+              searchResults = routeResults;
+              break;
+            }
+          }
+          
+          // Also try searching file_name field with variants
+          if (!searchResults || searchResults.length === 0) {
+            for (const pattern of searchPatterns) {
+              const { data: fileNameResults } = await supabase
+                .from('wiki_files_index')
+                .select('file_id, file_name, route')
+                .ilike('file_name', pattern)
+                .limit(10);
+              
+              if (fileNameResults && fileNameResults.length > 0) {
+                searchResults = fileNameResults;
+                break;
+              }
+            }
+          }
 
           // Second try: if no results, try fulltext search with prefix matching
           if (!searchResults || searchResults.length === 0) {
