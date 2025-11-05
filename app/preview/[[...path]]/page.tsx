@@ -164,7 +164,21 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
 
     return (
       <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
+          <a
+            href="/preview/api-keys"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#24292e',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              display: 'inline-block',
+            }}
+          >
+            API Keys
+          </a>
           <a
             href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
             target="_blank"
@@ -219,7 +233,21 @@ ${nav}
 
     return (
       <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
+          <a
+            href="/preview/api-keys"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#24292e',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              display: 'inline-block',
+            }}
+          >
+            API Keys
+          </a>
           <a
             href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
             target="_blank"
@@ -333,7 +361,21 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
 
     return (
       <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
+          <a
+            href="/preview/api-keys"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#24292e',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              display: 'inline-block',
+            }}
+          >
+            API Keys
+          </a>
           <a
             href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
             target="_blank"
