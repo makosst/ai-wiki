@@ -16,7 +16,7 @@ const handler = createMcpHandler(
         .describe('MIME type of the file (e.g., "text/markdown"). Defaults to "text/plain"'),
     });
 
-    if(false){
+    if(true){
     // Contribute tool: Upload files and map them to routes. Supports single or batch contributions.
     server.tool(
       'contribute',
