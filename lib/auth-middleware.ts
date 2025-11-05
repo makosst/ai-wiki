@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function validateApiKey(request: NextRequest): Promise<boolean> {
-  const apiKey = request.headers.get('aiwiki_api_key');
+  // Try to get API key from header first, then from query parameter
+  let apiKey = request.headers.get('aiwiki_api_key');
+
+  if (!apiKey) {
+    const { searchParams } = new URL(request.url);
+    apiKey = searchParams.get('api_key') || searchParams.get('aiwiki_api_key');
+  }
 
   if (!apiKey) {
     return false;
@@ -33,7 +39,7 @@ export function createUnauthorizedResponse() {
   return new Response(
     JSON.stringify({
       error: 'Unauthorized',
-      message: 'Invalid or missing API key. Please provide a valid API key in the AIWIKI_API_KEY header.'
+      message: 'Invalid or missing API key. Please provide a valid API key in the AIWIKI_API_KEY header or as a query parameter (?api_key=xxx).'
     }),
     {
       status: 401,
