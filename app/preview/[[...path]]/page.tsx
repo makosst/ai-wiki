@@ -179,27 +179,7 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
           >
             API Keys
           </a>
-          <a
-            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center"
-          >
-            <Image
-              src="https://cursor.com/deeplink/mcp-install-dark.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="dark:hidden"
-            />
-            <Image
-              src="https://cursor.com/deeplink/mcp-install.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="hidden dark:block"
-            />
-          </a>
+          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
         </div>
         <ReactMarkdown>{errorContent}</ReactMarkdown>
       </div>
@@ -248,27 +228,7 @@ ${nav}
           >
             API Keys
           </a>
-          <a
-            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center"
-          >
-            <Image
-              src="https://cursor.com/deeplink/mcp-install-dark.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="dark:hidden"
-            />
-            <Image
-              src="https://cursor.com/deeplink/mcp-install.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="hidden dark:block"
-            />
-          </a>
+          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
         </div>
         <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
@@ -376,27 +336,7 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
           >
             API Keys
           </a>
-          <a
-            href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AifQ%3D%3D"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center"
-          >
-            <Image
-              src="https://cursor.com/deeplink/mcp-install-dark.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="dark:hidden"
-            />
-            <Image
-              src="https://cursor.com/deeplink/mcp-install.svg"
-              alt="Install MCP Server"
-              width={200}
-              height={48}
-              className="hidden dark:block"
-            />
-          </a>
+          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
         </div>
         <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
