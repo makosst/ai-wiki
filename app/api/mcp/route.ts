@@ -138,15 +138,10 @@ const handler = createMcpHandler(
   { basePath: '/api' },
 );
 
-// Wrap handler with authentication
-async function authenticatedHandler(request: NextRequest) {
-  const isValid = await validateApiKey(request);
-
-  if (!isValid) {
-    return createUnauthorizedResponse();
-  }
-
+// Optional authentication wrapper - works with or without API key
+async function optionalAuthHandler(request: NextRequest) {
+  // API key is now optional - just continue to handler
   return handler(request);
 }
 
-export { authenticatedHandler as GET, authenticatedHandler as POST, authenticatedHandler as DELETE };
+export { optionalAuthHandler as GET, optionalAuthHandler as POST, optionalAuthHandler as DELETE };
