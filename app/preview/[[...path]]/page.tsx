@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
-import Image from 'next/image';
+import { cookies } from 'next/headers';
+
+const CURSOR_INSTALL_LINK =
+  'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
 
 interface PageProps {
   params: Promise<{
@@ -139,6 +142,38 @@ export default async function PreviewPage({ params }: PageProps) {
   const pathSegments = resolvedParams.path || [];
   const route = pathSegments.join('/');
 
+  const cookieStore = await cookies();
+  const loginCookie = cookieStore.get('aiwiki_logged_in')?.value;
+  let isLoggedIn = loginCookie === '1';
+
+  const accessToken = cookieStore.get('sb-access-token')?.value;
+  if (!isLoggedIn && accessToken) {
+    const { data, error } = await supabase.auth.getUser(accessToken);
+    if (!error && data?.user) {
+      isLoggedIn = true;
+    }
+  }
+
+  const actionButtons = isLoggedIn ? (
+    <div className="preview-actions">
+      <a className="preview-action preview-action--primary" href="/preview/api-keys">
+        API Keys
+      </a>
+      <a className="preview-action preview-action--secondary" href={CURSOR_INSTALL_LINK}>
+        Add to Cursor
+      </a>
+    </div>
+  ) : (
+    <div className="preview-actions">
+      <a className="preview-action preview-action--primary" href="/login?mode=signup">
+        Sign Up
+      </a>
+      <a className="preview-action preview-action--secondary" href="/login">
+        Log In
+      </a>
+    </div>
+  );
+
   // Try to find exact route match
   const { data: indexData, error: indexError } = await supabase
     .from('wiki_files_index')
@@ -163,25 +198,11 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
 `;
 
     return (
-      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
-          <a
-            href="/preview/api-keys"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#24292e',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              display: 'inline-block',
-            }}
-          >
-            API Keys
-          </a>
-          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
+      <div className="preview-container">
+        {actionButtons}
+        <div className="preview-content">
+          <ReactMarkdown>{errorContent}</ReactMarkdown>
         </div>
-        <ReactMarkdown>{errorContent}</ReactMarkdown>
       </div>
     );
     }
@@ -212,25 +233,11 @@ ${nav}
 `;
 
     return (
-      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
-          <a
-            href="/preview/api-keys"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#24292e',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              display: 'inline-block',
-            }}
-          >
-            API Keys
-          </a>
-          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
+      <div className="preview-container">
+        {actionButtons}
+        <div className="preview-content">
+          <ReactMarkdown>{markdownContent}</ReactMarkdown>
         </div>
-        <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
   }
@@ -279,15 +286,26 @@ ${nav}
     }
 
     // Build directory listing - create framed content with markdown links
-    const listingLines = sortedChildren.map(([name, info]) => {
-      const icon = info.file_name ? '[FILE]' : '[DIR] ';
-      const fileName = info.file_name ? ` (${info.file_name})` : '';
-      return `${icon} [${name}](/preview/${info.route})${fileName}`;
-    });
+    const isRootRoute = route.length === 0;
+    const rootUtilityLinks = isRootRoute && isLoggedIn
+      ? [
+          '[LINK] [API Keys](/preview/api-keys)',
+          `[LINK] [Add to Cursor](${CURSOR_INSTALL_LINK})`,
+        ]
+      : [];
+
+    const listingLines = [
+      ...rootUtilityLinks,
+      ...sortedChildren.map(([name, info]) => {
+        const icon = info.file_name ? '[FILE]' : '[DIR] ';
+        const fileName = info.file_name ? ` (${info.file_name})` : '';
+        return `${icon} [${name}](/preview/${info.route})${fileName}`;
+      }),
+    ];
 
     // If we're at the root, also show recently added files
     let recentlyAddedSection = '';
-    if (route.length === 0) {
+    if (isRootRoute) {
       const { data: recentFiles } = await supabase
         .from('wiki_files_index')
         .select('route, file_name, updated_at')
@@ -320,25 +338,11 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
 `;
 
     return (
-      <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }} className="preview-container">
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
-          <a
-            href="/preview/api-keys"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#24292e',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              display: 'inline-block',
-            }}
-          >
-            API Keys
-          </a>
-          <a href="https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add ai-wiki MCP server to Cursor" height="32" /></a>
+      <div className="preview-container">
+        {actionButtons}
+        <div className="preview-content">
+          <ReactMarkdown>{markdownContent}</ReactMarkdown>
         </div>
-        <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>
     );
   }
@@ -353,8 +357,11 @@ No files or directories found at route: ${route || '(root)'}
 `;
 
   return (
-    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '1200px', margin: '0 auto' }} className="preview-container">
-      <ReactMarkdown>{markdownContent}</ReactMarkdown>
+    <div className="preview-container">
+      {actionButtons}
+      <div className="preview-content">
+        <ReactMarkdown>{markdownContent}</ReactMarkdown>
+      </div>
     </div>
   );
 }

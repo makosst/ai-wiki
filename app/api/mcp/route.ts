@@ -16,8 +16,8 @@ const handler = createMcpHandler(
         .describe('MIME type of the file (e.g., "text/markdown"). Defaults to "text/plain"'),
     });
 
-    if(true){
-    // Contribute tool: Upload files and map them to routes. Supports single or batch contributions.
+    // Contribution tool temporarily disabled in favor of API-only submissions.
+    /*
     server.tool(
       'contribute',
       'Upload content directly to the AI wiki and map it to one or more routes. Provide either a single contribution object or an array under "contributions".',
@@ -51,7 +51,7 @@ const handler = createMcpHandler(
         };
       },
     );
-  }
+    */
     // Read tool: Get file by route or search
     server.tool(
       'read',

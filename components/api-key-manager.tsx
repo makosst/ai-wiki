@@ -29,6 +29,8 @@ interface ApiKey {
   is_active: boolean;
 }
 
+const LOGIN_COOKIE_NAME = 'aiwiki_logged_in';
+
 export function ApiKeyManager() {
   const [user, setUser] = useState<User | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -36,16 +38,25 @@ export function ApiKeyManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
 
+  const syncLoginCookie = (signedIn: boolean) => {
+    if (typeof document === 'undefined') return;
+    const secureFlag = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+    const maxAge = signedIn ? 60 * 60 * 24 * 7 : 0; // one week
+    document.cookie = `${LOGIN_COOKIE_NAME}=${signedIn ? '1' : ''}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secureFlag}`;
+  };
+
   useEffect(() => {
     // Check if user is logged in and handle OAuth callback
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
       setIsLoading(false);
+      syncLoginCookie(!!session?.user);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user || null);
+      syncLoginCookie(!!session?.user);
 
       // If sign in event, reload API keys
       if (event === 'SIGNED_IN' && session) {
@@ -87,6 +98,7 @@ export function ApiKeyManager() {
 
   const handleSignOut = async () => {
     await supabaseClient.auth.signOut();
+    syncLoginCookie(false);
     setApiKeys([]);
   };
 

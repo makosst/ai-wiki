@@ -122,7 +122,58 @@
 }
 
 .preview-container {
+  position: relative;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
   font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  background-color: transparent;
+}
+
+.preview-actions {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.preview-action {
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 100px;
+  transition: opacity 0.2s ease;
+}
+
+.preview-action--primary {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+.preview-action--secondary {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+.preview-action:hover {
+  opacity: 0.85;
+}
+
+.preview-content {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: auto;
 }
 
 .preview-container a {
@@ -136,12 +187,12 @@
 }
 
 .preview-container p {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: inherit;
   white-space: pre-wrap;
 }
 
 .preview-container pre {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: inherit;
   white-space: pre;
   overflow-x: auto;
   background: transparent;
@@ -150,7 +201,31 @@
 }
 
 .preview-container code {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: inherit;
   white-space: pre;
   background: transparent;
+}
+
+@media (max-width: 768px) {
+  .preview-container {
+    padding: 16px 12px 32px;
+    font-size: 14px;
+  }
+
+  .preview-actions {
+    position: static;
+    width: 100%;
+    margin-bottom: 16px;
+    justify-content: center;
+  }
+
+  .preview-action {
+    flex: 1 1 48%;
+    min-width: 0;
+  }
+
+  .preview-content {
+    font-size: 14px;
+    overflow-x: auto;
+  }
 }
