@@ -52,21 +52,27 @@ export function ApiKeyManager() {
   };
 
   useEffect(() => {
+    // Set up auth state listener first
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user || null);
+      syncLoginCookie(!!session?.user);
+      setIsLoading(false);
+
+      if (event === 'SIGNED_IN' && session) {
+        // Clear the hash from URL after successful sign in
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        // Reload API keys
+        loadApiKeys();
+      }
+    });
+
+    // Then get the current session (this will also process OAuth callback hash if present)
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
       setIsLoading(false);
       syncLoginCookie(!!session?.user);
-    });
-
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user || null);
-      syncLoginCookie(!!session?.user);
-
-      if (event === 'SIGNED_IN' && session) {
-        if (window.location.hash) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-      }
     });
 
     return () => subscription.unsubscribe();
