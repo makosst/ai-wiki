@@ -154,25 +154,9 @@ export default async function PreviewPage({ params }: PageProps) {
     }
   }
 
-  const actionButtons = isLoggedIn ? (
-    <div className="preview-actions">
-      <a className="preview-action preview-action--primary" href="/preview/api-keys">
-        API Keys
-      </a>
-      <a className="preview-action preview-action--secondary" href={CURSOR_INSTALL_LINK}>
-        Add to Cursor
-      </a>
-    </div>
-  ) : (
-    <div className="preview-actions">
-      <a className="preview-action preview-action--primary" href="/login?mode=signup">
-        Sign Up
-      </a>
-      <a className="preview-action preview-action--secondary" href="/login">
-        Log In
-      </a>
-    </div>
-  );
+  const actionLinks = isLoggedIn
+    ? `[🔑 API Keys](/preview/api-keys) | [➕ Add to Cursor](${CURSOR_INSTALL_LINK})`
+    : `[📝 Sign Up](/login?mode=signup) | [🔐 Log In](/login)`;
 
   // Try to find exact route match
   const { data: indexData, error: indexError } = await supabase
@@ -190,6 +174,8 @@ export default async function PreviewPage({ params }: PageProps) {
 
     if (fileError || !fileData) {
       const errorContent = `
+${actionLinks}
+
 [← Root](/preview)
 
 ${createAsciiHeader('ERROR')}
@@ -199,7 +185,6 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
 
     return (
       <div className="preview-container">
-        {actionButtons}
         <div className="preview-content">
           <ReactMarkdown>{errorContent}</ReactMarkdown>
         </div>
@@ -218,6 +203,8 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
     const framedContent = wrapInAsciiFrame(fileContent, 96);
 
     const markdownContent = `
+${actionLinks}
+
 ${nav}
 
 ${createAsciiHeader(`📄 ${route || 'Root'}`)}
@@ -234,7 +221,6 @@ ${nav}
 
     return (
       <div className="preview-container">
-        {actionButtons}
         <div className="preview-content">
           <ReactMarkdown>{markdownContent}</ReactMarkdown>
         </div>
@@ -244,13 +230,29 @@ ${nav}
 
   // No exact match found, check for child routes
   const routePrefix = route.length > 0 ? (route.endsWith('/') ? route : `${route}/`) : '';
-  const { data: childRoutes, error: childError } = await supabase
-    .from('wiki_files_index')
-    .select('route, file_name')
-    .like('route', routePrefix ? `${routePrefix}%` : '%')
-    .order('route');
 
-  if (!childError && childRoutes && childRoutes.length > 0) {
+  // Fetch all child routes using pagination (Supabase has a 1000 row limit per request)
+  let childRoutes: Array<{ route: string; file_name: string | null }> = [];
+  let offset = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data: pageData, error: pageError } = await supabase
+      .from('wiki_files_index')
+      .select('route, file_name')
+      .like('route', routePrefix ? `${routePrefix}%` : '%')
+      .order('route')
+      .range(offset, offset + pageSize - 1);
+
+    if (pageError || !pageData || pageData.length === 0) break;
+
+    childRoutes.push(...pageData);
+
+    if (pageData.length < pageSize) break; // Last page
+    offset += pageSize;
+  }
+
+  if (childRoutes && childRoutes.length > 0) {
     // Filter to get only immediate children, not nested grandchildren
     const immediateChildren = new Map<string, { route: string; file_name: string | null }>();
 
@@ -286,31 +288,21 @@ ${nav}
     }
 
     // Build directory listing - create framed content with markdown links
-    const isRootRoute = route.length === 0;
-    const rootUtilityLinks = isRootRoute && isLoggedIn
-      ? [
-          '[LINK] [API Keys](/preview/api-keys)',
-          `[LINK] [Add to Cursor](${CURSOR_INSTALL_LINK})`,
-        ]
-      : [];
-
-    const listingLines = [
-      ...rootUtilityLinks,
-      ...sortedChildren.map(([name, info]) => {
-        const icon = info.file_name ? '[FILE]' : '[DIR] ';
-        const fileName = info.file_name ? ` (${info.file_name})` : '';
-        return `${icon} [${name}](/preview/${info.route})${fileName}`;
-      }),
-    ];
+    const listingLines = sortedChildren.map(([name, info]) => {
+      const icon = info.file_name ? '[FILE]' : '[DIR] ';
+      const fileName = info.file_name ? ` (${info.file_name})` : '';
+      return `${icon} [${name}](/preview/${info.route})${fileName}`;
+    });
 
     // If we're at the root, also show recently added files
+    const isRootRoute = route.length === 0;
     let recentlyAddedSection = '';
     if (isRootRoute) {
       const { data: recentFiles } = await supabase
         .from('wiki_files_index')
         .select('route, file_name, updated_at')
         .order('updated_at', { ascending: false })
-        .limit(10);
+        .limit(50);
 
       if (recentFiles && recentFiles.length > 0) {
         const recentLines = recentFiles.map(file => {
@@ -330,6 +322,8 @@ ${renderFramedMarkdown(recentLines)}
     }
 
     const markdownContent = `
+${actionLinks}
+
 ${nav}${createAsciiHeader(`📁 ${route || 'AI WIKI - ROOT'}`)}
 
 Directory listing - ${sortedChildren.length} item(s)
@@ -339,7 +333,6 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
 
     return (
       <div className="preview-container">
-        {actionButtons}
         <div className="preview-content">
           <ReactMarkdown>{markdownContent}</ReactMarkdown>
         </div>
@@ -349,6 +342,8 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
 
   // Nothing found
   const markdownContent = `
+${actionLinks}
+
 [← Root](/preview)
 
 ${createAsciiHeader('404 - NOT FOUND')}
@@ -358,7 +353,6 @@ No files or directories found at route: ${route || '(root)'}
 
   return (
     <div className="preview-container">
-      {actionButtons}
       <div className="preview-content">
         <ReactMarkdown>{markdownContent}</ReactMarkdown>
       </div>

@@ -199,12 +199,29 @@ export class WikiService {
 
       // No exact match found, check for child routes
       const routePrefix = route.endsWith('/') ? route : `${route}/`;
-      const { data: initialChildRoutes } = await supabase
-        .from('wiki_files_index')
-        .select('route, file_name')
-        .like('route', `${routePrefix}%`)
-        .order('route');
-      let childRoutes = initialChildRoutes;
+
+      // Fetch all child routes using pagination (Supabase has a 1000 row limit per request)
+      let allChildRoutes: Array<{ route: string; file_name: string | null }> = [];
+      let offset = 0;
+      const pageSize = 1000;
+
+      while (true) {
+        const { data: pageData } = await supabase
+          .from('wiki_files_index')
+          .select('route, file_name')
+          .like('route', `${routePrefix}%`)
+          .order('route')
+          .range(offset, offset + pageSize - 1);
+
+        if (!pageData || pageData.length === 0) break;
+
+        allChildRoutes.push(...pageData);
+
+        if (pageData.length < pageSize) break; // Last page
+        offset += pageSize;
+      }
+
+      let childRoutes = allChildRoutes;
 
       // Try fuzzy prefix match if no exact children found
       if ((!childRoutes || childRoutes.length === 0) && !route.endsWith('/')) {
@@ -213,7 +230,8 @@ export class WikiService {
           .from('wiki_files_index')
           .select('route, file_name')
           .ilike('route', fuzzyPattern)
-          .order('route');
+          .order('route')
+          .limit(10000);
 
         if (fuzzyResults && fuzzyResults.length > 0) {
           // Find the longest common prefix among all fuzzy results
@@ -236,7 +254,8 @@ export class WikiService {
               .from('wiki_files_index')
               .select('route, file_name')
               .like('route', `${commonPrefix}/%`)
-              .order('route');
+              .order('route')
+              .limit(10000);
 
             if (suggestedChildren && suggestedChildren.length > 0) {
               childRoutes = suggestedChildren;
