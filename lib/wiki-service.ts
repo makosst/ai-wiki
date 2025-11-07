@@ -38,12 +38,21 @@ export const readResultSchema = z.object({
   message: z.string().optional(),
 });
 
+export const deleteResultSchema = z.object({
+  success: z.boolean(),
+  route: z.string(),
+  deletedCount: z.number(),
+  message: z.string(),
+  deletedRoutes: z.array(z.string()).optional(),
+});
+
 // Inferred types
 export type Contribution = z.infer<typeof contributionSchema>;
 export type ContributionResult = z.infer<typeof contributionResultSchema>;
 export type ChildRoute = z.infer<typeof childRouteSchema>;
 export type SearchResultItem = z.infer<typeof searchResultItemSchema>;
 export type ReadResult = z.infer<typeof readResultSchema>;
+export type DeleteResult = z.infer<typeof deleteResultSchema>;
 
 // Helper function to generate route variants (with/without .md extension)
 function getRouteVariants(searchRoute: string): string[] {
@@ -408,5 +417,122 @@ export class WikiService {
    */
   static async batchRead(routes: string[]): Promise<ReadResult[]> {
     return Promise.all(routes.map(route => this.read(route)));
+  }
+
+  /**
+   * Delete a file or directory (including all children) from the wiki
+   */
+  static async delete(route: string): Promise<DeleteResult> {
+    try {
+      const routesToDelete: Array<{ route: string; file_id: string; file_name: string }> = [];
+
+      // First, try to find exact route match (check both with/without .md)
+      const routeVariants = getRouteVariants(route);
+      let exactMatch = null;
+
+      for (const variant of routeVariants) {
+        const result = await supabase
+          .from('wiki_files_index')
+          .select('file_id, file_name, route')
+          .eq('route', variant)
+          .single();
+
+        if (!result.error && result.data) {
+          exactMatch = result.data;
+          break;
+        }
+      }
+
+      if (exactMatch) {
+        // Found exact file match
+        routesToDelete.push(exactMatch);
+      } else {
+        // No exact match, check for directory (routes that start with this prefix)
+        const routePrefix = route.endsWith('/') ? route : `${route}/`;
+
+        // Fetch all child routes using pagination
+        let allChildRoutes: Array<{ route: string; file_id: string; file_name: string }> = [];
+        let offset = 0;
+        const pageSize = 1000;
+
+        while (true) {
+          const { data: pageData } = await supabase
+            .from('wiki_files_index')
+            .select('route, file_id, file_name')
+            .like('route', `${routePrefix}%`)
+            .order('route')
+            .range(offset, offset + pageSize - 1);
+
+          if (!pageData || pageData.length === 0) break;
+
+          allChildRoutes.push(...pageData);
+
+          if (pageData.length < pageSize) break; // Last page
+          offset += pageSize;
+        }
+
+        if (allChildRoutes.length > 0) {
+          routesToDelete.push(...allChildRoutes);
+        }
+      }
+
+      if (routesToDelete.length === 0) {
+        return {
+          success: false,
+          route,
+          deletedCount: 0,
+          message: `Route "${route}" not found. Nothing to delete.`,
+        };
+      }
+
+      // Delete files from storage
+      const filePaths = routesToDelete.map(item => `${item.file_id}/${item.file_name}`);
+      const { data: storageDeleteData, error: storageError } = await supabase.storage
+        .from('ai-wiki-storage')
+        .remove(filePaths);
+
+      if (storageError) {
+        return {
+          success: false,
+          route,
+          deletedCount: 0,
+          message: `Failed to delete files from storage: ${storageError.message}`,
+        };
+      }
+
+      // Delete entries from index
+      const routeList = routesToDelete.map(item => item.route);
+      const { error: indexError } = await supabase
+        .from('wiki_files_index')
+        .delete()
+        .in('route', routeList);
+
+      if (indexError) {
+        return {
+          success: false,
+          route,
+          deletedCount: 0,
+          message: `Failed to delete from index: ${indexError.message}`,
+        };
+      }
+
+      const isDirectory = routesToDelete.length > 1 || !exactMatch;
+      const deletedType = isDirectory ? 'directory' : 'file';
+
+      return {
+        success: true,
+        route,
+        deletedCount: routesToDelete.length,
+        deletedRoutes: routeList,
+        message: `Successfully deleted ${deletedType} "${route}" (${routesToDelete.length} ${routesToDelete.length === 1 ? 'file' : 'files'})`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        route,
+        deletedCount: 0,
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
   }
 }

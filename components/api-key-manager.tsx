@@ -99,7 +99,7 @@ export function ApiKeyManager() {
     await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/preview/api-keys`,
+        redirectTo: `${window.location.origin}/api-keys`,
       },
     });
   };
@@ -173,7 +173,7 @@ Loading...
 
   if (!user) {
     const content = `
-[← Back to Wiki](/preview)
+[← Back to Wiki](/)
 
 ${createAsciiHeader('🔑 API KEY MANAGEMENT')}
 
@@ -209,7 +209,7 @@ ${createAsciiBox(['Click the button below to sign in with your Google account'])
   }
 
   const content = `
-[← Back to Wiki](/preview)
+[← Back to Wiki](/)
 
 ${createAsciiHeader('🔑 API KEY MANAGEMENT')}
 

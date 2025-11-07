@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import { cookies } from 'next/headers';
+import { CopyButton } from '@/components/copy-button';
 
 const CURSOR_INSTALL_LINK =
   'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
@@ -155,7 +156,7 @@ export default async function PreviewPage({ params }: PageProps) {
   }
 
   const actionLinks = isLoggedIn
-    ? `[🔑 API Keys](/preview/api-keys) | [➕ Add to Cursor](${CURSOR_INSTALL_LINK})`
+    ? `[🔑 API Keys](/api-keys) | [➕ Add to Cursor](${CURSOR_INSTALL_LINK})`
     : `[📝 Sign Up](/login?mode=signup) | [🔐 Log In](/login)`;
 
   // Try to find exact route match
@@ -176,7 +177,7 @@ export default async function PreviewPage({ params }: PageProps) {
       const errorContent = `
 ${actionLinks}
 
-[← Root](/preview)
+[← Root](/)
 
 ${createAsciiHeader('ERROR')}
 
@@ -195,23 +196,23 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
     const fileContent = await fileData.text();
 
     // Build navigation
-    let nav = '[← Root](/preview)';
+    let nav = '[← Root](/)';
     if (pathSegments.length > 1) {
-      nav += ` | [↑ Up](/preview/${pathSegments.slice(0, -1).join('/')})`;
+      const upPath = pathSegments.slice(0, -1).join('/');
+      nav += ` | [↑ Up](/${upPath})`;
     }
 
     const framedContent = wrapInAsciiFrame(fileContent, 96);
 
-    const markdownContent = `
+    const topMarkdown = `
 ${actionLinks}
 
 ${nav}
 
 ${createAsciiHeader(`📄 ${route || 'Root'}`)}
+`;
 
-File: ${indexData.file_name}
-Updated: ${new Date(indexData.updated_at).toLocaleDateString()}
-
+    const framedMarkdown = `
 \`\`\`
 ${framedContent}
 \`\`\`
@@ -219,10 +220,18 @@ ${framedContent}
 ${nav}
 `;
 
+    const formattedDate = new Date(indexData.updated_at).toLocaleDateString();
+
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{markdownContent}</ReactMarkdown>
+          <ReactMarkdown>{topMarkdown}</ReactMarkdown>
+          <div className="file-metadata">
+            <p>File: {indexData.file_name}</p>
+            <p>Updated: {formattedDate}</p>
+            <CopyButton text={fileContent} ariaLabel="Copy file content" />
+          </div>
+          <ReactMarkdown>{framedMarkdown}</ReactMarkdown>
         </div>
       </div>
     );
@@ -280,9 +289,10 @@ ${nav}
     // Build navigation
     let nav = '';
     if (route.length > 0) {
-      nav = '[← Root](/preview)';
+      nav = '[← Root](/)';
       if (pathSegments.length > 1) {
-        nav += ` | [↑ Up](/preview/${pathSegments.slice(0, -1).join('/')})`;
+        const upPath = pathSegments.slice(0, -1).join('/');
+        nav += ` | [↑ Up](/${upPath})`;
       }
       nav += '\n\n';
     }
@@ -291,7 +301,7 @@ ${nav}
     const listingLines = sortedChildren.map(([name, info]) => {
       const icon = info.file_name ? '[FILE]' : '[DIR] ';
       const fileName = info.file_name ? ` (${info.file_name})` : '';
-      return `${icon} [${name}](/preview/${info.route})${fileName}`;
+      return `${icon} [${name}](/${info.route})${fileName}`;
     });
 
     // If we're at the root, also show recently added files
@@ -307,7 +317,7 @@ ${nav}
       if (recentFiles && recentFiles.length > 0) {
         const recentLines = recentFiles.map(file => {
           const date = new Date(file.updated_at).toLocaleDateString();
-          return `[${file.route}](/preview/${file.route}) - ${file.file_name} (${date})`;
+          return `[${file.route}](/${file.route}) - ${file.file_name} (${date})`;
         });
 
         recentlyAddedSection = `
@@ -344,7 +354,7 @@ ${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
   const markdownContent = `
 ${actionLinks}
 
-[← Root](/preview)
+[← Root](/)
 
 ${createAsciiHeader('404 - NOT FOUND')}
 

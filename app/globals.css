@@ -200,6 +200,40 @@
   margin: 0;
 }
 
+.file-metadata {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 16px 0;
+  font-family: inherit;
+  white-space: normal;
+}
+
+.file-metadata p {
+  margin: 0;
+}
+
+.copy-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #0066cc;
+  font-family: inherit;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  text-decoration: underline;
+}
+
+.copy-button:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
 .preview-container code {
   font-family: inherit;
   white-space: pre;

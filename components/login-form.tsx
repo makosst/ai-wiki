@@ -25,7 +25,7 @@ export function LoginForm({
   const handleGoogleAuth = async () => {
     setError(null)
     setIsGoogleLoading(true)
-    const redirectTo = `${window.location.origin}/preview/api-keys`
+    const redirectTo = `${window.location.origin}/api-keys`
 
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: "google",
