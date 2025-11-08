@@ -234,6 +234,152 @@
   outline-offset: 2px;
 }
 
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  font-family: inherit;
+}
+
+.view-toggle-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #0066cc;
+  font-family: inherit;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.view-toggle-button:hover {
+  text-decoration: underline;
+}
+
+.view-toggle-button:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.markdown-framed {
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  font-size: 16px;
+  display: inline-block;
+  width: 96ch;
+  max-width: 100%;
+}
+
+.frame-border {
+  font-family: inherit;
+  white-space: pre;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  line-height: 1;
+  height: auto;
+  display: block;
+  font-size: 16px;
+  width: 96ch;
+}
+
+.markdown-content-wrapper {
+  display: flex;
+  font-family: inherit;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  align-items: flex-start;
+  font-size: 16px;
+  width: 96ch;
+}
+
+.markdown-side-border {
+  font-family: inherit;
+  white-space: pre;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  background: transparent;
+  height: auto;
+  vertical-align: top;
+  font-size: 16px;
+  display: block;
+  width: 1ch;
+}
+
+.markdown-view {
+  font-family: inherit;
+  white-space: pre-wrap;
+  line-height: 1;
+  margin: 0;
+  padding: 0 1ch;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  font-size: 16px;
+  display: block;
+  width: 94ch;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.markdown-view * {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  font-size: 16px !important;
+}
+
+.markdown-view h1,
+.markdown-view h2,
+.markdown-view h3,
+.markdown-view h4,
+.markdown-view h5,
+.markdown-view h6 {
+  font-family: inherit;
+  font-weight: bold;
+  display: inline;
+}
+
+.markdown-view h1::after,
+.markdown-view h2::after,
+.markdown-view h3::after,
+.markdown-view h4::after,
+.markdown-view h5::after,
+.markdown-view h6::after {
+  content: "\a";
+  white-space: pre;
+}
+
+.markdown-view ul,
+.markdown-view ol {
+  padding-left: 20px;
+  list-style-position: outside;
+}
+
+.markdown-view li {
+  display: list-item;
+}
+
+.markdown-view p {
+  display: inline;
+}
+
+.markdown-view p::after {
+  content: "\a";
+  white-space: pre;
+}
+
+.markdown-view br {
+  display: none;
+}
+
 .preview-container code {
   font-family: inherit;
   white-space: pre;
