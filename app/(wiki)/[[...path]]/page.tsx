@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import { cookies } from 'next/headers';
 import { CopyButton } from '@/components/copy-button';
-import { ViewToggle } from '@/components/view-toggle';
+import { ViewToggleProvider, ViewToggleButton, ViewToggleContent } from '@/components/view-toggle';
 
 const CURSOR_INSTALL_LINK =
   'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
@@ -219,12 +219,15 @@ ${createAsciiHeader(`📄 ${route || 'Root'}`)}
       <div className="preview-container">
         <div className="preview-content">
           <ReactMarkdown>{topMarkdown}</ReactMarkdown>
-          <div className="file-metadata">
-            <p>File: {indexData.file_name}</p>
-            <p>Updated: {formattedDate}</p>
-            <CopyButton text={fileContent} ariaLabel="Copy file content" />
-          </div>
-          <ViewToggle content={fileContent} framedContent={framedContent} />
+          <ViewToggleProvider content={fileContent} framedContent={framedContent}>
+            <div className="file-metadata">
+              <p>File: {indexData.file_name}</p>
+              <p>Updated: {formattedDate}</p>
+              <CopyButton text={fileContent} ariaLabel="Copy file content" />
+              <ViewToggleButton />
+            </div>
+            <ViewToggleContent content={fileContent} framedContent={framedContent} />
+          </ViewToggleProvider>
           <ReactMarkdown>{nav}</ReactMarkdown>
         </div>
       </div>
