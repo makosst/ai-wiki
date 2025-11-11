@@ -5,7 +5,7 @@ import { WikiService } from '@/lib/wiki-service';
 import { validateApiKey, createUnauthorizedResponse } from '@/lib/auth-middleware';
 
 const handler = createMcpHandler(
-  (server) => {
+  (server, request) => {
     const singleContributionSchema = z.object({
       fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
       content: z.string().describe('The file content as a string'),
@@ -60,6 +60,20 @@ const handler = createMcpHandler(
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
       async ({ route }) => {
+        // Check authentication before executing tool
+        const isAuthenticated = await validateApiKey(request);
+        if (!isAuthenticated) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Authentication required. Please provide a valid API key in the AIWIKI_API_KEY header or as a query parameter (?api_key=xxx).',
+              },
+            ],
+            isError: true,
+          };
+        }
+
         const result = await WikiService.read(route);
 
         if (!result.success) {
@@ -138,10 +152,12 @@ const handler = createMcpHandler(
   { basePath: '/api' },
 );
 
-// Optional authentication wrapper - works with or without API key
-async function optionalAuthHandler(request: NextRequest) {
-  // API key is now optional - just continue to handler
+// MCP handler that allows tool listing without auth but requires auth for tool execution
+async function mcpAuthHandler(request: NextRequest) {
+  // Allow the handler to process the request
+  // Tool listing (tools/list) will work without authentication
+  // Individual tool calls will check authentication internally
   return handler(request);
 }
 
-export { optionalAuthHandler as GET, optionalAuthHandler as POST, optionalAuthHandler as DELETE };
+export { mcpAuthHandler as GET, mcpAuthHandler as POST, mcpAuthHandler as DELETE };
