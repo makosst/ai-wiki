@@ -1,9 +1,8 @@
 import { z } from 'zod';
-import { createMcpHandler, withMcpAuth } from 'mcp-handler';
-import { NextRequest } from 'next/server';
+import { createMcpHandler } from 'mcp-handler';
 import { WikiService } from '@/lib/wiki-service';
-import { validateApiKey, createUnauthorizedResponse } from '@/lib/auth-middleware';
-import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+import { supabase } from '@/lib/supabase';
+import { NextResponse } from 'next/server';
 
 const handler = createMcpHandler(
   (server) => {
@@ -61,19 +60,6 @@ const handler = createMcpHandler(
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
       async ({ route }, extra) => {
-        // Check authentication - authInfo will be present if authenticated via withMcpAuth
-        if (!extra.authInfo) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Authentication required. Please provide a valid AIWIKI_API_KEY in your MCP client configuration as a request header.',
-              },
-            ],
-            isError: true,
-          };
-        }
-
         const result = await WikiService.read(route);
 
         if (!result.success) {
@@ -152,30 +138,84 @@ const handler = createMcpHandler(
   { basePath: '/api' },
 );
 
-// Custom token verification function for API key authentication
-const verifyApiKey = async (
-  req: Request,
-  bearerToken?: string
-): Promise<AuthInfo | undefined> => {
-  // Convert to NextRequest to use our existing validateApiKey function
-  const nextReq = new NextRequest(req);
-  const isValid = await validateApiKey(nextReq);
+// Validate API key from request without consuming the body
+async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
+  // Get API key from header or query parameter
+  let apiKey = req.headers.get('aiwiki_api_key');
 
-  if (!isValid) {
-    return undefined;
+  if (!apiKey) {
+    const url = new URL(req.url);
+    apiKey = url.searchParams.get('api_key') || url.searchParams.get('aiwiki_api_key');
   }
 
-  // Return AuthInfo if validation succeeds
-  return {
-    token: bearerToken || 'api-key-authenticated',
-    scopes: [],
-    clientId: 'api-key-user',
-  };
+  if (!apiKey) {
+    console.log('[MCP Auth] No API key provided');
+    return false;
+  }
+
+  console.log('[MCP Auth] Validating API key:', apiKey.substring(0, 20) + '...');
+
+  // Validate API key against database
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, is_active, user_id')
+    .eq('key', apiKey)
+    .eq('is_active', true)
+    .single();
+
+  if (error) {
+    console.log('[MCP Auth] Database error:', error);
+    return false;
+  }
+
+  if (!data) {
+    console.log('[MCP Auth] No matching API key found');
+    return false;
+  }
+
+  console.log('[MCP Auth] Valid API key found for user:', data.user_id);
+
+  // Update last_used_at
+  await supabase
+    .from('api_keys')
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('id', data.id);
+
+  return true;
+}
+
+// Wrap the handler with authentication
+async function authenticatedHandler(req: Request) {
+  // Allow OPTIONS requests for CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, aiwiki_api_key',
+      },
+    });
+  }
+
+  const isValid = await validateApiKeyFromRequest(req);
+
+  if (!isValid) {
+    return NextResponse.json(
+      {
+        error: 'Unauthorized',
+        message: 'Invalid or missing API key. Please provide a valid API key in the aiwiki_api_key header or as a query parameter (?api_key=xxx).'
+      },
+      { status: 401 }
+    );
+  }
+
+  return handler(req);
+}
+
+export {
+  authenticatedHandler as GET,
+  authenticatedHandler as POST,
+  authenticatedHandler as DELETE,
+  authenticatedHandler as OPTIONS
 };
-
-// Wrap handler with MCP auth - make auth optional so tool listing works without auth
-const authHandler = withMcpAuth(handler, verifyApiKey, {
-  required: false, // Allow tool listing without auth, but tools will check auth internally
-});
-
-export { authHandler as GET, authHandler as POST, authHandler as DELETE };
