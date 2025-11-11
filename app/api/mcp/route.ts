@@ -4,11 +4,8 @@ import { NextRequest } from 'next/server';
 import { WikiService } from '@/lib/wiki-service';
 import { validateApiKey, createUnauthorizedResponse } from '@/lib/auth-middleware';
 
-// Store the current request in a way that can be accessed by tools
-let currentRequest: NextRequest | null = null;
-
 const handler = createMcpHandler(
-  (server) => {
+  (server, request) => {
     const singleContributionSchema = z.object({
       fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
       content: z.string().describe('The file content as a string'),
@@ -64,19 +61,7 @@ const handler = createMcpHandler(
       },
       async ({ route }) => {
         // Check authentication before executing tool
-        if (!currentRequest) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Request context not available.',
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        const isAuthenticated = await validateApiKey(currentRequest);
+        const isAuthenticated = await validateApiKey(request);
         if (!isAuthenticated) {
           return {
             content: [
@@ -169,18 +154,10 @@ const handler = createMcpHandler(
 
 // MCP handler that allows tool listing without auth but requires auth for tool execution
 async function mcpAuthHandler(request: NextRequest) {
-  // Store the request so it can be accessed by tools
-  currentRequest = request;
-
-  try {
-    // Allow the handler to process the request
-    // Tool listing (tools/list) will work without authentication
-    // Individual tool calls will check authentication internally
-    return await handler(request);
-  } finally {
-    // Clean up the request reference
-    currentRequest = null;
-  }
+  // Allow the handler to process the request
+  // Tool listing (tools/list) will work without authentication
+  // Individual tool calls will check authentication internally
+  return handler(request);
 }
 
 export { mcpAuthHandler as GET, mcpAuthHandler as POST, mcpAuthHandler as DELETE };
