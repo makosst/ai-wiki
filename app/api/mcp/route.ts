@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { createMcpHandler } from 'mcp-handler';
+import { createMcpHandler, withMcpAuth } from 'mcp-handler';
 import { NextRequest } from 'next/server';
 import { WikiService } from '@/lib/wiki-service';
 import { validateApiKey, createUnauthorizedResponse } from '@/lib/auth-middleware';
+import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 
 const handler = createMcpHandler(
-  (server, request) => {
+  (server) => {
     const singleContributionSchema = z.object({
       fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
       content: z.string().describe('The file content as a string'),
@@ -59,10 +60,9 @@ const handler = createMcpHandler(
       {
         route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
       },
-      async ({ route }) => {
-        // Check authentication before executing tool
-        const isAuthenticated = await validateApiKey(request);
-        if (!isAuthenticated) {
+      async ({ route }, extra) => {
+        // Check authentication - authInfo will be present if authenticated via withMcpAuth
+        if (!extra.authInfo) {
           return {
             content: [
               {
@@ -152,12 +152,30 @@ const handler = createMcpHandler(
   { basePath: '/api' },
 );
 
-// MCP handler that allows tool listing without auth but requires auth for tool execution
-async function mcpAuthHandler(request: NextRequest) {
-  // Allow the handler to process the request
-  // Tool listing (tools/list) will work without authentication
-  // Individual tool calls will check authentication internally
-  return handler(request);
-}
+// Custom token verification function for API key authentication
+const verifyApiKey = async (
+  req: Request,
+  bearerToken?: string
+): Promise<AuthInfo | undefined> => {
+  // Convert to NextRequest to use our existing validateApiKey function
+  const nextReq = new NextRequest(req);
+  const isValid = await validateApiKey(nextReq);
 
-export { mcpAuthHandler as GET, mcpAuthHandler as POST, mcpAuthHandler as DELETE };
+  if (!isValid) {
+    return undefined;
+  }
+
+  // Return AuthInfo if validation succeeds
+  return {
+    token: bearerToken || 'api-key-authenticated',
+    scopes: [],
+    clientId: 'api-key-user',
+  };
+};
+
+// Wrap handler with MCP auth - make auth optional so tool listing works without auth
+const authHandler = withMcpAuth(handler, verifyApiKey, {
+  required: false, // Allow tool listing without auth, but tools will check auth internally
+});
+
+export { authHandler as GET, authHandler as POST, authHandler as DELETE };
