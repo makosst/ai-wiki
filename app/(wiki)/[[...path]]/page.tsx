@@ -64,20 +64,22 @@ export default async function PreviewPage({ params }: PageProps) {
       .download(filePath);
 
     if (fileError || !fileData) {
-      const errorContent = `
+      const topSection = `
 ${actionLinks}
 
-[← Root](/)
+[← Root](/)`;
 
-${createAsciiHeader('ERROR')}
+      const errorContent = `**ERROR**
 
-File could not be retrieved: ${fileError?.message || 'Unknown error'}
-`;
+File could not be retrieved: ${fileError?.message || 'Unknown error'}`;
 
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{errorContent}</ReactMarkdown>
+          <ReactMarkdown>{topSection}</ReactMarkdown>
+          <div className="content-block">
+            <ReactMarkdown>{errorContent}</ReactMarkdown>
+          </div>
         </div>
       </div>
     );
@@ -98,11 +100,11 @@ File could not be retrieved: ${fileError?.message || 'Unknown error'}
 ${actionLinks}
 
 ${nav}
-
-${createAsciiHeader(`📄 ${route || 'Root'}`)}
 `;
 
     const formattedDate = new Date(indexData.updated_at).toLocaleDateString();
+
+    const titleContent = `**📄 ${route || 'Root'}**`;
 
     return (
       <div className="preview-container">
@@ -110,6 +112,7 @@ ${createAsciiHeader(`📄 ${route || 'Root'}`)}
           <ReactMarkdown>{topMarkdown}</ReactMarkdown>
           <ViewToggleProvider content={fileContent} framedContent={framedContent}>
             <div className="file-metadata">
+              <ReactMarkdown>{titleContent}</ReactMarkdown>
               <p>File: {indexData.file_name}</p>
               <p>Updated: {formattedDate}</p>
               <CopyButton text={fileContent} ariaLabel="Copy file content" />
@@ -190,15 +193,21 @@ ${createAsciiHeader(`📄 ${route || 'Root'}`)}
       return `${icon} [${name}](/${info.route})${fileName}`;
     });
 
+    const directoryContent = `**📁 ${route || 'AI WIKI - ROOT'}**
+
+Directory listing - ${sortedChildren.length} item(s)
+
+${renderFramedMarkdown(listingLines)}`;
+
     // If we're at the root, also show recently added files
     const isRootRoute = route.length === 0;
-    let recentlyAddedSection = '';
+    let recentContent = '';
     if (isRootRoute) {
       const { data: recentFiles } = await supabase
         .from('wiki_files_index')
         .select('route, file_name, updated_at')
         .order('updated_at', { ascending: false })
-        .limit(50);
+        .limit(20);
 
       if (recentFiles && recentFiles.length > 0) {
         const recentLines = recentFiles.map(file => {
@@ -206,51 +215,53 @@ ${createAsciiHeader(`📄 ${route || 'Root'}`)}
           return `[${file.route}](/${file.route}) - ${file.file_name} (${date})`;
         });
 
-        recentlyAddedSection = `
+        recentContent = `**📅 RECENTLY ADDED**
 
-${createAsciiHeader('📅 RECENTLY ADDED')}
+Last 20 updated files
 
-Last ${recentFiles.length} updated files
-
-${renderFramedMarkdown(recentLines)}
-`;
+${renderFramedMarkdown(recentLines)}`;
       }
     }
 
-    const markdownContent = `
+    const topSection = `
 ${actionLinks}
 
-${nav}${createAsciiHeader(`📁 ${route || 'AI WIKI - ROOT'}`)}
-
-Directory listing - ${sortedChildren.length} item(s)
-
-${renderFramedMarkdown(listingLines)}${recentlyAddedSection}
-`;
+${nav}`;
 
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{markdownContent}</ReactMarkdown>
+          <ReactMarkdown>{topSection}</ReactMarkdown>
+          <div className="content-block">
+            <ReactMarkdown>{directoryContent}</ReactMarkdown>
+          </div>
+          {recentContent && (
+            <div className="content-block">
+              <ReactMarkdown>{recentContent}</ReactMarkdown>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   // Nothing found
-  const markdownContent = `
+  const topSection = `
 ${actionLinks}
 
-[← Root](/)
+[← Root](/)`;
 
-${createAsciiHeader('404 - NOT FOUND')}
+  const notFoundContent = `**404 - NOT FOUND**
 
-No files or directories found at route: ${route || '(root)'}
-`;
+No files or directories found at route: ${route || '(root)'}`;
 
   return (
     <div className="preview-container">
       <div className="preview-content">
-        <ReactMarkdown>{markdownContent}</ReactMarkdown>
+        <ReactMarkdown>{topSection}</ReactMarkdown>
+        <div className="content-block">
+          <ReactMarkdown>{notFoundContent}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );

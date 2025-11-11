@@ -82,7 +82,7 @@ const handler = createMcpHandler(
             content: [
               {
                 type: 'text',
-                text: 'Authentication required. Please provide a valid API key in the AIWIKI_API_KEY header or as a query parameter (?api_key=xxx).',
+                text: 'Authentication required. Please provide a valid AIWIKI_API_KEY in your MCP client configuration as a request header.',
               },
             ],
             isError: true,
