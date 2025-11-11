@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { Button } from '@/components/retroui/Button';
 
 interface ViewToggleProps {
   content: string;
@@ -41,14 +42,15 @@ export function ViewToggleButton() {
   if (!context) throw new Error('ViewToggleButton must be used within ViewToggleProvider');
 
   return (
-    <button
+    <Button
       type="button"
-      className="view-toggle-button"
       onClick={context.toggleView}
       aria-label="Toggle between markdown and plain text view"
+      variant="outline"
+      size="sm"
     >
       {context.viewMode === 'plain' ? 'Markdown' : 'Plain'}
-    </button>
+    </Button>
   );
 }
 

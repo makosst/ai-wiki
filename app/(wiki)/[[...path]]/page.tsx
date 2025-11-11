@@ -3,6 +3,10 @@ import ReactMarkdown from 'react-markdown';
 import { cookies } from 'next/headers';
 import { CopyButton } from '@/components/copy-button';
 import { ViewToggleProvider, ViewToggleButton, ViewToggleContent } from '@/components/view-toggle';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/retroui/Card';
+import { Text } from '@/components/retroui/Text';
+import { Button } from '@/components/retroui/Button';
+import Link from 'next/link';
 
 const CURSOR_INSTALL_LINK =
   'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
@@ -45,9 +49,29 @@ export default async function PreviewPage({ params }: PageProps) {
     }
   }
 
-  const actionLinks = isLoggedIn
-    ? `[🔑 API Keys](/api-keys) | [➕ Add to Cursor](${CURSOR_INSTALL_LINK})`
-    : `[📝 Sign Up](/login?mode=signup) | [🔐 Log In](/login)`;
+  const ActionLinks = () => (
+    <div className="flex gap-2 mb-4 flex-wrap">
+      {isLoggedIn ? (
+        <>
+          <Link href="/api-keys">
+            <Button variant="secondary" size="sm">🔑 API Keys</Button>
+          </Link>
+          <a href={CURSOR_INSTALL_LINK} target="_blank" rel="noopener noreferrer">
+            <Button variant="default" size="sm">➕ Add to Cursor</Button>
+          </a>
+        </>
+      ) : (
+        <>
+          <Link href="/login?mode=signup">
+            <Button variant="secondary" size="sm">📝 Sign Up</Button>
+          </Link>
+          <Link href="/login">
+            <Button variant="secondary" size="sm">🔐 Log In</Button>
+          </Link>
+        </>
+      )}
+    </div>
+  );
 
   // Try to find exact route match
   const { data: indexData, error: indexError } = await supabase
@@ -64,63 +88,73 @@ export default async function PreviewPage({ params }: PageProps) {
       .download(filePath);
 
     if (fileError || !fileData) {
-      const topSection = `
-${actionLinks}
-
-[← Root](/)`;
-
-      const errorContent = `**ERROR**
-
-File could not be retrieved: ${fileError?.message || 'Unknown error'}`;
-
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{topSection}</ReactMarkdown>
-          <div className="content-block">
-            <ReactMarkdown>{errorContent}</ReactMarkdown>
+          <ActionLinks />
+          <div className="mb-4">
+            <Link href="/">
+              <Button variant="outline" size="sm">← Root</Button>
+            </Link>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Error</CardTitle>
+              <CardDescription>File could not be retrieved: {fileError?.message || 'Unknown error'}</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       </div>
     );
     }
 
     const fileContent = await fileData.text();
-
-    // Build navigation
-    let nav = '[← Root](/)';
-    if (pathSegments.length > 1) {
-      const upPath = pathSegments.slice(0, -1).join('/');
-      nav += ` | [↑ Up](/${upPath})`;
-    }
-
     const framedContent = wrapInAsciiFrame(fileContent, 96);
-
-    const topMarkdown = `
-${actionLinks}
-
-${nav}
-`;
-
     const formattedDate = new Date(indexData.updated_at).toLocaleDateString();
-
-    const titleContent = `**📄 ${route || 'Root'}**`;
 
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{topMarkdown}</ReactMarkdown>
+          <ActionLinks />
+          <div className="flex gap-2 mb-4">
+            <Link href="/">
+              <Button variant="outline" size="sm">← Root</Button>
+            </Link>
+            {pathSegments.length > 1 && (
+              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
+                <Button variant="outline" size="sm">↑ Up</Button>
+              </Link>
+            )}
+          </div>
           <ViewToggleProvider content={fileContent} framedContent={framedContent}>
-            <div className="file-metadata">
-              <ReactMarkdown>{titleContent}</ReactMarkdown>
-              <p>File: {indexData.file_name}</p>
-              <p>Updated: {formattedDate}</p>
-              <CopyButton text={fileContent} ariaLabel="Copy file content" />
-              <ViewToggleButton />
-            </div>
-            <ViewToggleContent content={fileContent} framedContent={framedContent} />
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>📄 {route || 'Root'}</CardTitle>
+                <CardDescription>
+                  File: {indexData.file_name} | Updated: {formattedDate}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <CopyButton text={fileContent} ariaLabel="Copy file content" />
+                <ViewToggleButton />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-0">
+                <ViewToggleContent content={fileContent} framedContent={framedContent} />
+              </CardContent>
+            </Card>
           </ViewToggleProvider>
-          <ReactMarkdown>{nav}</ReactMarkdown>
+          <div className="flex gap-2 mt-4">
+            <Link href="/">
+              <Button variant="outline" size="sm">← Root</Button>
+            </Link>
+            {pathSegments.length > 1 && (
+              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
+                <Button variant="outline" size="sm">↑ Up</Button>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -175,70 +209,80 @@ ${nav}
       a[0].localeCompare(b[0])
     );
 
-    // Build navigation
-    let nav = '';
-    if (route.length > 0) {
-      nav = '[← Root](/)';
-      if (pathSegments.length > 1) {
-        const upPath = pathSegments.slice(0, -1).join('/');
-        nav += ` | [↑ Up](/${upPath})`;
-      }
-      nav += '\n\n';
-    }
-
-    // Build directory listing - create framed content with markdown links
-    const listingLines = sortedChildren.map(([name, info]) => {
-      const icon = info.file_name ? '[FILE]' : '[DIR] ';
-      const fileName = info.file_name ? ` (${info.file_name})` : '';
-      return `${icon} [${name}](/${info.route})${fileName}`;
-    });
-
-    const directoryContent = `**📁 ${route || 'AI WIKI - ROOT'}**
-
-Directory listing - ${sortedChildren.length} item(s)
-
-${renderFramedMarkdown(listingLines)}`;
-
     // If we're at the root, also show recently added files
     const isRootRoute = route.length === 0;
-    let recentContent = '';
+    let recentFiles = null;
     if (isRootRoute) {
-      const { data: recentFiles } = await supabase
+      const { data } = await supabase
         .from('wiki_files_index')
         .select('route, file_name, updated_at')
         .order('updated_at', { ascending: false })
         .limit(20);
-
-      if (recentFiles && recentFiles.length > 0) {
-        const recentLines = recentFiles.map(file => {
-          const date = new Date(file.updated_at).toLocaleDateString();
-          return `[${file.route}](/${file.route}) - ${file.file_name} (${date})`;
-        });
-
-        recentContent = `**📅 RECENTLY ADDED**
-
-Last 20 updated files
-
-${renderFramedMarkdown(recentLines)}`;
-      }
+      recentFiles = data;
     }
-
-    const topSection = `
-${actionLinks}
-
-${nav}`;
 
     return (
       <div className="preview-container">
         <div className="preview-content">
-          <ReactMarkdown>{topSection}</ReactMarkdown>
-          <div className="content-block">
-            <ReactMarkdown>{directoryContent}</ReactMarkdown>
+          <ActionLinks />
+          <div className="flex gap-2 mb-4">
+            {route.length > 0 && (
+              <>
+                <Link href="/">
+                  <Button variant="outline" size="sm">← Root</Button>
+                </Link>
+                {pathSegments.length > 1 && (
+                  <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
+                    <Button variant="outline" size="sm">↑ Up</Button>
+                  </Link>
+                )}
+              </>
+            )}
           </div>
-          {recentContent && (
-            <div className="content-block">
-              <ReactMarkdown>{recentContent}</ReactMarkdown>
-            </div>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>📁 {route || 'AI WIKI - ROOT'}</CardTitle>
+              <CardDescription>Directory listing - {sortedChildren.length} item(s)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {sortedChildren.map(([name, info]) => {
+                  const icon = info.file_name ? '📄' : '📁';
+                  const fileName = info.file_name ? ` (${info.file_name})` : '';
+                  return (
+                    <div key={name} className="flex items-center gap-2">
+                      <span>{icon}</span>
+                      <Link href={`/${info.route}`} className="hover:underline">
+                        {name}{fileName}
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+          {recentFiles && recentFiles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📅 Recently Added</CardTitle>
+                <CardDescription>Last 20 updated files</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentFiles.map(file => {
+                    const date = new Date(file.updated_at).toLocaleDateString();
+                    return (
+                      <div key={file.route} className="flex items-center gap-2 text-sm">
+                        <Link href={`/${file.route}`} className="hover:underline">
+                          {file.route}
+                        </Link>
+                        <span className="text-muted-foreground">- {file.file_name} ({date})</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -246,22 +290,23 @@ ${nav}`;
   }
 
   // Nothing found
-  const topSection = `
-${actionLinks}
-
-[← Root](/)`;
-
-  const notFoundContent = `**404 - NOT FOUND**
-
-No files or directories found at route: ${route || '(root)'}`;
-
   return (
     <div className="preview-container">
       <div className="preview-content">
-        <ReactMarkdown>{topSection}</ReactMarkdown>
-        <div className="content-block">
-          <ReactMarkdown>{notFoundContent}</ReactMarkdown>
+        <ActionLinks />
+        <div className="mb-4">
+          <Link href="/">
+            <Button variant="outline" size="sm">← Root</Button>
+          </Link>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>404 - Not Found</CardTitle>
+            <CardDescription>
+              No files or directories found at route: {route || '(root)'}
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     </div>
   );

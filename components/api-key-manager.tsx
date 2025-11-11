@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabaseClient } from '@/lib/supabase-client';
 import type { User } from '@supabase/supabase-js';
 import ReactMarkdown from 'react-markdown';
+import { Button } from '@/components/retroui/Button';
+import { Input } from '@/components/retroui/Input';
 
 interface ApiKey {
   id: string;
@@ -188,21 +190,14 @@ ${createAsciiBox(['Click the button below to sign in with your Google account'])
       <div className="preview-container">
         <div className="preview-content">
           <ReactMarkdown>{content}</ReactMarkdown>
-          <button
+          <Button
             onClick={handleSignIn}
-            style={{
-              fontFamily: 'monospace',
-              padding: '10px 20px',
-              marginTop: '20px',
-              cursor: 'pointer',
-              backgroundColor: '#333',
-              color: '#fff',
-              border: '2px solid #666',
-              borderRadius: '4px',
-            }}
+            variant="secondary"
+            size="lg"
+            className="mt-5"
           >
             🔐 Sign In with Google
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -238,38 +233,24 @@ ${showNewKey}
 
         {showNewKey && (
           <div style={{ marginTop: '10px', marginBottom: '20px' }}>
-            <button
+            <Button
               onClick={() => {
                 navigator.clipboard.writeText(showNewKey);
                 setStatusMessage('✅ API key copied to clipboard!');
               }}
-              style={{
-                fontFamily: 'monospace',
-                padding: '8px 16px',
-                marginRight: '10px',
-                cursor: 'pointer',
-                backgroundColor: '#2d5',
-                color: '#fff',
-                border: '2px solid #1a3',
-                borderRadius: '4px',
-              }}
+              variant="default"
+              size="md"
+              className="mr-2"
             >
               📋 Copy Key
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowNewKey(null)}
-              style={{
-                fontFamily: 'monospace',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                backgroundColor: '#666',
-                color: '#fff',
-                border: '2px solid #888',
-                borderRadius: '4px',
-              }}
+              variant="secondary"
+              size="md"
             >
               ✖ Close
-            </button>
+            </Button>
           </div>
         )}
 
@@ -295,22 +276,14 @@ ${showNewKey}
                   <div>
                     <strong>{key.name}</strong> | {masked} | Created: {created}
                   </div>
-                  <button
+                  <Button
                     onClick={() => revokeApiKey(key.id, key.name)}
-                    style={{
-                      fontFamily: 'monospace',
-                      padding: '6px 12px',
-                      cursor: 'pointer',
-                      backgroundColor: '#d33',
-                      color: '#fff',
-                      border: '2px solid #a11',
-                      borderRadius: '4px',
-                      marginLeft: '10px',
-                      flexShrink: 0
-                    }}
+                    variant="secondary"
+                    size="sm"
+                    style={{ marginLeft: '10px', flexShrink: 0 }}
                   >
                     🗑️ Revoke
-                  </button>
+                  </Button>
                 </div>
               );
             })}
@@ -319,35 +292,21 @@ ${showNewKey}
 
         {!showNewKey && (
           <form onSubmit={generateApiKey} style={{ marginTop: '20px', marginBottom: '20px' }}>
-            <input
+            <Input
               type="text"
               placeholder="e.g., 'Production Server'"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
               required
-              style={{
-                fontFamily: 'monospace',
-                padding: '10px',
-                width: '300px',
-                marginRight: '10px',
-                border: '2px solid #666',
-                borderRadius: '4px'
-              }}
+              style={{ width: '300px', marginRight: '10px' }}
             />
-            <button
+            <Button
               type="submit"
-              style={{
-                fontFamily: 'monospace',
-                padding: '10px 20px',
-                cursor: 'pointer',
-                backgroundColor: '#37d',
-                color: '#fff',
-                border: '2px solid #25b',
-                borderRadius: '4px',
-              }}
+              variant="default"
+              size="md"
             >
               ➕ Create API Key
-            </button>
+            </Button>
           </form>
         )}
       </div>

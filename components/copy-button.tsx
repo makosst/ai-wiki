@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/retroui/Button';
 
 interface CopyButtonProps {
   text: string;
@@ -34,14 +35,15 @@ export function CopyButton({ text, ariaLabel = 'Copy content' }: CopyButtonProps
   };
 
   return (
-    <button
+    <Button
       type="button"
-      className="copy-button"
       onClick={handleCopy}
       aria-live="polite"
       aria-label={ariaLabel}
+      variant="outline"
+      size="sm"
     >
       {copied ? 'Copied!' : 'Copy'}
-    </button>
+    </Button>
   );
 }
