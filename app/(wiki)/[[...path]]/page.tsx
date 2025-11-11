@@ -14,129 +14,18 @@ interface PageProps {
 }
 
 function wrapInAsciiFrame(content: string, maxWidth: number = 100): string {
-  const lines = content.split('\n');
-  const width = maxWidth;
-  const maxLineLength = width - 4; // Account for "║ " and " ║"
-
-  const topBorder = '╔' + '═'.repeat(width - 2) + '╗';
-  const bottomBorder = '╚' + '═'.repeat(width - 2) + '╝';
-
-  // Wrap long lines
-  const wrappedLines: string[] = [];
-  lines.forEach(line => {
-    if (line.length <= maxLineLength) {
-      wrappedLines.push(line);
-    } else {
-      // Split long lines into chunks
-      let remaining = line;
-      while (remaining.length > 0) {
-        if (remaining.length <= maxLineLength) {
-          wrappedLines.push(remaining);
-          break;
-        }
-        // Try to break at a space
-        let breakPoint = maxLineLength;
-        const lastSpace = remaining.lastIndexOf(' ', maxLineLength);
-        if (lastSpace > maxLineLength * 0.7) { // Only break at space if it's not too far back
-          breakPoint = lastSpace;
-        }
-        wrappedLines.push(remaining.substring(0, breakPoint));
-        remaining = remaining.substring(breakPoint).trimStart();
-      }
-    }
-  });
-
-  const paddedLines = wrappedLines.map(line => {
-    const padding = Math.max(0, maxLineLength - line.length);
-    return '║ ' + line + ' '.repeat(padding) + ' ║';
-  });
-
-  return [topBorder, ...paddedLines, bottomBorder].join('\n');
-}
-
-// Helper to calculate display length (ignoring markdown link syntax)
-function getDisplayLength(text: string): number {
-  // Remove markdown link syntax [text](url) and just count the display text
-  return text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').length;
-}
-
-// Helper to wrap a line with markdown links
-function wrapLineWithMarkdown(line: string, maxLength: number): string[] {
-  const displayLength = getDisplayLength(line);
-
-  if (displayLength <= maxLength) {
-    return [line];
-  }
-
-  // If line is too long, we need to wrap it
-  // For simplicity, break at spaces while trying to keep markdown links together
-  const result: string[] = [];
-  let currentLine = '';
-  let currentDisplayLength = 0;
-
-  // Split by spaces but keep markdown links together
-  const parts = line.split(' ');
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    const partDisplayLength = getDisplayLength(part);
-    const spaceNeeded = currentLine.length > 0 ? 1 : 0; // For the space
-
-    if (currentDisplayLength + spaceNeeded + partDisplayLength <= maxLength) {
-      if (currentLine.length > 0) {
-        currentLine += ' ';
-        currentDisplayLength += 1;
-      }
-      currentLine += part;
-      currentDisplayLength += partDisplayLength;
-    } else {
-      // Start a new line
-      if (currentLine.length > 0) {
-        result.push(currentLine);
-      }
-      currentLine = part;
-      currentDisplayLength = partDisplayLength;
-    }
-  }
-
-  if (currentLine.length > 0) {
-    result.push(currentLine);
-  }
-
-  return result.length > 0 ? result : [line];
+  // No frame - just return the content as-is
+  return content;
 }
 
 function renderFramedMarkdown(lines: string[], maxWidth: number = 96): string {
-  const width = maxWidth;
-  const maxLineLength = width - 4; // Account for "║ " and " ║"
-
-  const topBorder = '╔' + '═'.repeat(width - 2) + '╗';
-  const bottomBorder = '╚' + '═'.repeat(width - 2) + '╝';
-
-  const framedLines: string[] = [topBorder];
-
-  lines.forEach(line => {
-    const wrappedLines = wrapLineWithMarkdown(line, maxLineLength);
-
-    wrappedLines.forEach(wrappedLine => {
-      const displayLength = getDisplayLength(wrappedLine);
-      const padding = Math.max(0, maxLineLength - displayLength);
-      framedLines.push('║ ' + wrappedLine + ' '.repeat(padding) + ' ║');
-    });
-  });
-
-  framedLines.push(bottomBorder);
-  return framedLines.join('\n');
+  // No frame - just join lines with newlines
+  return lines.join('\n');
 }
 
 function createAsciiHeader(title: string): string {
-  const width = Math.max(title.length + 4, 60);
-  const topBorder = '┌' + '─'.repeat(width - 2) + '┐';
-  const bottomBorder = '└' + '─'.repeat(width - 2) + '┘';
-  const padding = Math.max(0, width - 4 - title.length);
-  const titleLine = '│ ' + title + ' '.repeat(padding) + ' │';
-
-  return [topBorder, titleLine, bottomBorder].join('\n');
+  // No frame - just return the title with some formatting
+  return `# ${title}`;
 }
 
 export default async function PreviewPage({ params }: PageProps) {

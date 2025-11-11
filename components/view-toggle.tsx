@@ -141,6 +141,6 @@ export function ViewToggleContent({ content, framedContent }: ViewToggleProps) {
       <ReactMarkdown>{`\`\`\`\n${framedContent}\n\`\`\``}</ReactMarkdown>
     )
   ) : (
-    <div className="markdown-framed" ref={containerRef}><pre className="frame-border">{frame.top}</pre><div className="markdown-content-wrapper" ref={wrapperRef}><pre className="markdown-side-border">{leftBorder}</pre><div className="markdown-view" ref={contentRef}><ReactMarkdown>{content}</ReactMarkdown></div><pre className="markdown-side-border">{rightBorder}</pre></div><pre className="frame-border">{frame.bottom}</pre></div>
+    <div className="markdown-framed" ref={containerRef}><div className="markdown-content-wrapper" ref={wrapperRef}><div className="markdown-view" ref={contentRef}><ReactMarkdown>{content}</ReactMarkdown></div></div></div>
   );
 }
