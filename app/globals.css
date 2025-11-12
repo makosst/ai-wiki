@@ -426,7 +426,6 @@
   max-width: 100%;
   border: none;
   outline: none;
-  transform: rotate(0.5deg);
 }
 
 .markdown-side-border {
@@ -616,7 +615,6 @@
     box-sizing: border-box;
     line-height: 1;
     align-items: stretch;
-    transform: rotate(0.5deg);
   }
 
   .markdown-side-border {
@@ -783,7 +781,6 @@
     overflow: visible;
     line-height: 1;
     align-items: stretch;
-    transform: rotate(0.5deg);
   }
 
   .markdown-side-border {

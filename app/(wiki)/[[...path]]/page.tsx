@@ -57,7 +57,7 @@ export default async function PreviewPage({ params }: PageProps) {
             <Button variant="secondary" size="sm">🔑 API Keys</Button>
           </Link>
           <a href={CURSOR_INSTALL_LINK} target="_blank" rel="noopener noreferrer">
-            <Button variant="default" size="sm">➕ Add to Cursor</Button>
+            <Button variant="secondary" size="sm">➕ Add to Cursor</Button>
           </a>
         </>
       ) : (
