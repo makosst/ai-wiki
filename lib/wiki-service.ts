@@ -76,6 +76,21 @@ export class WikiService {
       const { fileName, content, route, contentType = 'text/plain' } = contribution;
 
       try {
+        // Check if route already exists to handle updates
+        const { data: existingEntry } = await supabase
+          .from('wiki_files_index')
+          .select('file_id, file_name')
+          .eq('route', route)
+          .single();
+
+        // If updating, delete the old file from storage first
+        if (existingEntry) {
+          const oldFilePath = `${existingEntry.file_id}/${existingEntry.file_name}`;
+          await supabase.storage
+            .from('ai-wiki-storage')
+            .remove([oldFilePath]);
+        }
+
         const fileId = crypto.randomUUID();
         const filePath = `${fileId}/${fileName}`;
 
@@ -97,7 +112,7 @@ export class WikiService {
           continue;
         }
 
-        // Map the uploaded file to the provided route
+        // Map the uploaded file to the provided route (insert or update)
         const { error: insertError } = await supabase
           .from('wiki_files_index')
           .upsert(
@@ -122,12 +137,13 @@ export class WikiService {
           continue;
         }
 
+        const action = existingEntry ? 'updated' : 'created';
         results.push({
           success: true,
           route,
           fileId,
           fileName,
-          message: `Route "${route}" mapped to file ID ${fileId}`,
+          message: `Route "${route}" ${action} and mapped to file ID ${fileId}`,
         });
       } catch (error) {
         results.push({
