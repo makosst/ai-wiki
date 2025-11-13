@@ -250,9 +250,9 @@ export default async function PreviewPage({ params }: PageProps) {
                   const icon = info.file_name ? '📄' : '📁';
                   const fileName = info.file_name ? ` (${info.file_name})` : '';
                   return (
-                    <div key={name} className="flex items-center gap-2">
-                      <span>{icon}</span>
-                      <Link href={`/${info.route}`} className="hover:underline">
+                    <div key={name} className="flex flex-wrap items-center gap-2 break-words">
+                      <span className="flex-shrink-0">{icon}</span>
+                      <Link href={`/${info.route}`} className="hover:underline break-all">
                         {name}{fileName}
                       </Link>
                     </div>
@@ -272,11 +272,11 @@ export default async function PreviewPage({ params }: PageProps) {
                   {recentFiles.map(file => {
                     const date = new Date(file.updated_at).toLocaleDateString();
                     return (
-                      <div key={file.route} className="flex items-center gap-2 text-sm">
-                        <Link href={`/${file.route}`} className="hover:underline">
+                      <div key={file.route} className="flex flex-wrap items-center gap-2 text-sm break-words">
+                        <Link href={`/${file.route}`} className="hover:underline break-all">
                           {file.route}
                         </Link>
-                        <span className="text-muted-foreground">- {file.file_name} ({date})</span>
+                        <span className="text-muted-foreground break-words">- {file.file_name} ({date})</span>
                       </div>
                     );
                   })}

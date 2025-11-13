@@ -279,16 +279,16 @@ export function ApiKeyManager() {
                   return (
                     <div
                       key={key.id}
-                      className="flex justify-between items-center p-3 border-2 border-black rounded"
+                      className="flex flex-wrap justify-between items-center p-3 border-2 border-black rounded gap-2"
                     >
-                      <div className="font-mono text-sm">
+                      <div className="font-mono text-sm break-all flex-1 min-w-0">
                         <strong>{key.name}</strong> | {masked} | Created: {created}
                       </div>
                       <Button
                         onClick={() => revokeApiKey(key.id, key.name)}
                         variant="secondary"
                         size="sm"
-                        className="ml-2 flex-shrink-0"
+                        className="flex-shrink-0"
                       >
                         🗑️
                       </Button>

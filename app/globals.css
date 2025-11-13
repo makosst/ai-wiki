@@ -120,6 +120,8 @@
     @apply bg-background text-foreground;
     overflow-x: auto;
     width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   html {
     overflow-x: auto;
@@ -154,6 +156,8 @@
   overflow-y: visible;
   width: 100%;
   box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .preview-container .content-box {
@@ -225,6 +229,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .preview-content > * {
@@ -392,6 +398,8 @@
   border: none;
   outline: none;
   background-color: transparent;
+  overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .dark .markdown-framed {
@@ -422,10 +430,11 @@
   gap: 0;
   align-items: stretch;
   font-size: 16px;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   border: none;
   outline: none;
+  box-sizing: border-box;
 }
 
 .markdown-side-border {
@@ -455,7 +464,7 @@
   word-break: break-word;
   font-size: 16px;
   display: block;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   flex: 1;
@@ -665,48 +674,6 @@
     max-width: 100% !important;
   }
 
-  .plain-text-mobile {
-    font-size: 1rem !important;
-    width: calc(100% - 20px);
-    max-width: calc(100% - 20px);
-    line-height: 1.2 !important;
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    hyphens: auto !important;
-    box-sizing: border-box;
-    padding: 16px;
-    margin: 20px 10px 28px 10px;
-    background-color: #e8e8e8;
-    box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.8);
-    transform: rotate(-0.5deg);
-    border: 2px solid #333;
-  }
-
-  .dark .plain-text-mobile {
-    background-color: #2a2a2a;
-    box-shadow: 8px 8px 0px 0px rgba(255, 255, 255, 0.3);
-    border-color: #666;
-  }
-
-  .plain-text-mobile * {
-    font-size: inherit !important;
-    line-height: inherit !important;
-    max-width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    box-sizing: border-box !important;
-  }
-
-  .plain-text-mobile pre,
-  .plain-text-mobile code {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-all !important;
-    max-width: 100% !important;
-  }
 }
 
 @media (max-width: 480px) {
@@ -815,46 +782,4 @@
     word-break: break-all !important;
   }
 
-  .plain-text-mobile {
-    font-size: 1rem !important;
-    width: calc(100% - 20px);
-    max-width: calc(100% - 20px);
-    line-height: 1.2 !important;
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    hyphens: auto !important;
-    box-sizing: border-box;
-    padding: 16px;
-    margin: 20px 10px 28px 10px;
-    background-color: #e8e8e8;
-    box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.8);
-    transform: rotate(-0.5deg);
-    border: 2px solid #333;
-  }
-
-  .dark .plain-text-mobile {
-    background-color: #2a2a2a;
-    box-shadow: 8px 8px 0px 0px rgba(255, 255, 255, 0.3);
-    border-color: #666;
-  }
-
-  .plain-text-mobile * {
-    font-size: inherit !important;
-    line-height: inherit !important;
-    max-width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    box-sizing: border-box !important;
-  }
-
-  .plain-text-mobile pre,
-  .plain-text-mobile code {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-all !important;
-    max-width: 100% !important;
-  }
 }
