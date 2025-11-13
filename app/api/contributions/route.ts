@@ -3,6 +3,10 @@ import { WikiService, contributionSchema, type Contribution } from '@/lib/wiki-s
 import { validateApiKey, createUnauthorizedResponse } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
+const deleteRequestSchema = z.object({
+  route: z.string().min(1, 'Route is required'),
+});
+
 export async function POST(request: NextRequest) {
   // Validate API key
   const isValid = await validateApiKey(request);
@@ -64,6 +68,66 @@ export async function POST(request: NextRequest) {
         failed: failureCount,
       },
       results,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  // Validate API key
+  const isValid = await validateApiKey(request);
+  if (!isValid) {
+    return createUnauthorizedResponse();
+  }
+
+  try {
+    const body = await request.json();
+
+    // Validate request body
+    try {
+      deleteRequestSchema.parse(body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          {
+            error: 'Validation error',
+            message: 'Invalid delete request data',
+            details: error.errors,
+          },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
+    const { route } = body;
+
+    // Delete the contribution
+    const result = await WikiService.delete(route);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: 'Delete failed',
+          message: result.message,
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      route: result.route,
+      deletedCount: result.deletedCount,
+      deletedRoutes: result.deletedRoutes,
+      message: result.message,
     });
   } catch (error) {
     return NextResponse.json(
