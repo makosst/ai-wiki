@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AIWiki",
-  description: "An AI-powered wiki with MCP integration for Cursor.",
+  title: "aiwiki",
+  description: "Documentation source for your coding agents",
   viewport: {
     width: 'device-width',
     initialScale: 1,
