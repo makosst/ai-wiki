@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Text } from '@/components/retroui/Text';
 import { Button } from '@/components/retroui/Button';
 import Link from 'next/link';
+import { WikiService } from '@/lib/wiki-service';
 
 const CURSOR_INSTALL_LINK =
   'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
@@ -73,19 +74,13 @@ export default async function PreviewPage({ params }: PageProps) {
     </div>
   );
 
-  // Try to find exact route match
-  const { data: indexData, error: indexError } = await supabase
-    .from('wiki_files_index')
-    .select('file_id, file_name, route, updated_at')
-    .eq('route', route)
-    .single();
+  // Try to find exact route match (cached)
+  const { data: indexData, error: indexError } = await WikiService.getCachedIndexData(route);
 
   // If exact match found, display the file content
   if (!indexError && indexData) {
     const filePath = `${indexData.file_id}/${indexData.file_name}`;
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from('ai-wiki-storage')
-      .download(filePath);
+    const { data: fileData, error: fileError } = await WikiService.getCachedFileContent(filePath);
 
     if (fileError || !fileData) {
     return (
@@ -163,18 +158,17 @@ export default async function PreviewPage({ params }: PageProps) {
   // No exact match found, check for child routes
   const routePrefix = route.length > 0 ? (route.endsWith('/') ? route : `${route}/`) : '';
 
-  // Fetch all child routes using pagination (Supabase has a 1000 row limit per request)
+  // Fetch all child routes using pagination (cached)
   let childRoutes: Array<{ route: string; file_name: string | null }> = [];
   let offset = 0;
   const pageSize = 1000;
 
   while (true) {
-    const { data: pageData, error: pageError } = await supabase
-      .from('wiki_files_index')
-      .select('route, file_name')
-      .like('route', routePrefix ? `${routePrefix}%` : '%')
-      .order('route')
-      .range(offset, offset + pageSize - 1);
+    const { data: pageData, error: pageError } = await WikiService.getCachedChildRoutes(
+      routePrefix || '',
+      offset,
+      pageSize
+    );
 
     if (pageError || !pageData || pageData.length === 0) break;
 
@@ -209,15 +203,11 @@ export default async function PreviewPage({ params }: PageProps) {
       a[0].localeCompare(b[0])
     );
 
-    // If we're at the root, also show recently added files
+    // If we're at the root, also show recently added files (cached)
     const isRootRoute = route.length === 0;
     let recentFiles = null;
     if (isRootRoute) {
-      const { data } = await supabase
-        .from('wiki_files_index')
-        .select('route, file_name, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(20);
+      const { data } = await WikiService.getCachedRecentFiles();
       recentFiles = data;
     }
 

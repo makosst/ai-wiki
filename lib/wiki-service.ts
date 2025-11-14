@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
+import { unstable_cache } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 
 // Zod schemas
 export const contributionSchema = z.object({
@@ -65,7 +67,67 @@ function getRouteVariants(searchRoute: string): string[] {
   return variants;
 }
 
+// Cached functions for better performance between tabs
+const cachedGetIndexData = unstable_cache(async (route: string) => {
+  return await supabase
+    .from('wiki_files_index')
+    .select('file_id, file_name, route, updated_at')
+    .eq('route', route)
+    .single();
+}, ['get-index-data']);
+
+const cachedDownloadFile = unstable_cache(async (filePath: string) => {
+  return await supabase.storage
+    .from('ai-wiki-storage')
+    .download(filePath);
+}, ['download-file']);
+
+const cachedGetChildRoutes = unstable_cache(async (routePrefix: string, offset: number, pageSize: number) => {
+  return await supabase
+    .from('wiki_files_index')
+    .select('route, file_name')
+    .like('route', routePrefix ? `${routePrefix}%` : '%')
+    .order('route')
+    .range(offset, offset + pageSize - 1);
+}, ['get-child-routes']);
+
+const cachedGetRecentFiles = unstable_cache(async () => {
+  return await supabase
+    .from('wiki_files_index')
+    .select('route, file_name, updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(20);
+}, ['get-recent-files']);
+
 export class WikiService {
+  /**
+   * Get cached index data for a route
+   */
+  static async getCachedIndexData(route: string) {
+    return await cachedGetIndexData(route);
+  }
+
+  /**
+   * Get cached file content
+   */
+  static async getCachedFileContent(filePath: string) {
+    return await cachedDownloadFile(filePath);
+  }
+
+  /**
+   * Get cached child routes for a route prefix
+   */
+  static async getCachedChildRoutes(routePrefix: string, offset: number = 0, pageSize: number = 1000) {
+    return await cachedGetChildRoutes(routePrefix, offset, pageSize);
+  }
+
+  /**
+   * Get cached recent files
+   */
+  static async getCachedRecentFiles() {
+    return await cachedGetRecentFiles();
+  }
+
   /**
    * Contribute content to the wiki (single or batch)
    */
@@ -145,6 +207,12 @@ export class WikiService {
           fileName,
           message: `Route "${route}" ${action} and mapped to file ID ${fileId}`,
         });
+
+        // Invalidate caches after successful contribution
+        revalidateTag('get-index-data');
+        revalidateTag('download-file');
+        revalidateTag('get-child-routes');
+        revalidateTag('get-recent-files');
       } catch (error) {
         results.push({
           success: false,
@@ -552,6 +620,12 @@ export class WikiService {
         deletedRoutes: routeList,
         message: `Successfully deleted ${deletedType} "${route}" (${routesToDelete.length} ${routesToDelete.length === 1 ? 'file' : 'files'})`,
       };
+
+      // Invalidate caches after successful deletion
+      revalidateTag('get-index-data');
+      revalidateTag('download-file');
+      revalidateTag('get-child-routes');
+      revalidateTag('get-recent-files');
     } catch (error) {
       return {
         success: false,
