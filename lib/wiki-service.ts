@@ -209,10 +209,10 @@ export class WikiService {
         });
 
         // Invalidate caches after successful contribution
-        revalidateTag('get-index-data');
-        revalidateTag('download-file');
-        revalidateTag('get-child-routes');
-        revalidateTag('get-recent-files');
+        revalidateTag('get-index-data', 'default');
+        revalidateTag('download-file', 'default');
+        revalidateTag('get-child-routes', 'default');
+        revalidateTag('get-recent-files', 'default');
       } catch (error) {
         results.push({
           success: false,
@@ -622,10 +622,10 @@ export class WikiService {
       };
 
       // Invalidate caches after successful deletion
-      revalidateTag('get-index-data');
-      revalidateTag('download-file');
-      revalidateTag('get-child-routes');
-      revalidateTag('get-recent-files');
+      revalidateTag('get-index-data', 'default');
+      revalidateTag('download-file', 'default');
+      revalidateTag('get-child-routes', 'default');
+      revalidateTag('get-recent-files', 'default');
     } catch (error) {
       return {
         success: false,
