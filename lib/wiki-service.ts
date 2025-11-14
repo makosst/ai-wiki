@@ -501,35 +501,45 @@ export class WikiService {
         };
       }
 
-      // Delete files from storage
+      // Delete files from storage in batches
       const filePaths = routesToDelete.map(item => `${item.file_id}/${item.file_name}`);
-      const { data: storageDeleteData, error: storageError } = await supabase.storage
-        .from('ai-wiki-storage')
-        .remove(filePaths);
+      const storageBatchSize = 100;
 
-      if (storageError) {
-        return {
-          success: false,
-          route,
-          deletedCount: 0,
-          message: `Failed to delete files from storage: ${storageError.message}`,
-        };
+      for (let i = 0; i < filePaths.length; i += storageBatchSize) {
+        const batch = filePaths.slice(i, i + storageBatchSize);
+        const { error: storageError } = await supabase.storage
+          .from('ai-wiki-storage')
+          .remove(batch);
+
+        if (storageError) {
+          return {
+            success: false,
+            route,
+            deletedCount: 0,
+            message: `Failed to delete files from storage (batch ${Math.floor(i / storageBatchSize) + 1}): ${storageError.message}`,
+          };
+        }
       }
 
-      // Delete entries from index
+      // Delete entries from index in batches
       const routeList = routesToDelete.map(item => item.route);
-      const { error: indexError } = await supabase
-        .from('wiki_files_index')
-        .delete()
-        .in('route', routeList);
+      const indexBatchSize = 100;
 
-      if (indexError) {
-        return {
-          success: false,
-          route,
-          deletedCount: 0,
-          message: `Failed to delete from index: ${indexError.message}`,
-        };
+      for (let i = 0; i < routeList.length; i += indexBatchSize) {
+        const batch = routeList.slice(i, i + indexBatchSize);
+        const { error: indexError } = await supabase
+          .from('wiki_files_index')
+          .delete()
+          .in('route', batch);
+
+        if (indexError) {
+          return {
+            success: false,
+            route,
+            deletedCount: 0,
+            message: `Failed to delete from index (batch ${Math.floor(i / indexBatchSize) + 1}): ${indexError.message}`,
+          };
+        }
       }
 
       const isDirectory = routesToDelete.length > 1 || !exactMatch;
