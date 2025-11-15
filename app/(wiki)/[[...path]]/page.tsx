@@ -9,6 +9,9 @@ import { Button } from '@/components/retroui/Button';
 import Link from 'next/link';
 import { WikiService } from '@/lib/wiki-service';
 
+// Enable revalidation on page refresh while serving stale content
+export const revalidate = 0;
+
 const CURSOR_INSTALL_LINK =
   'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
 
@@ -77,85 +80,7 @@ export default async function PreviewPage({ params }: PageProps) {
   // Try to find exact route match (cached)
   const { data: indexData, error: indexError } = await WikiService.getCachedIndexData(route);
 
-  // If exact match found, display the file content
-  if (!indexError && indexData) {
-    const filePath = `${indexData.file_id}/${indexData.file_name}`;
-    const { data: fileData, error: fileError } = await WikiService.getCachedFileContent(filePath);
-
-    if (fileError || !fileData) {
-    return (
-      <div className="preview-container">
-        <div className="preview-content">
-          <ActionLinks />
-          <div className="mb-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">← Root</Button>
-            </Link>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-              <CardDescription>File could not be retrieved: {fileError?.message || 'Unknown error'}</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </div>
-    );
-    }
-
-    const fileContent = await fileData.text();
-    const framedContent = wrapInAsciiFrame(fileContent, 96);
-    const formattedDate = new Date(indexData.updated_at).toLocaleDateString();
-
-    return (
-      <div className="preview-container">
-        <div className="preview-content">
-          <ActionLinks />
-          <div className="flex gap-2 mb-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">← Root</Button>
-            </Link>
-            {pathSegments.length > 1 && (
-              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
-                <Button variant="outline" size="sm">↑ Up</Button>
-              </Link>
-            )}
-          </div>
-          <ViewToggleProvider content={fileContent} framedContent={framedContent}>
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>📄 {route || 'Root'}</CardTitle>
-                <CardDescription>
-                  File: {indexData.file_name} | Updated: {formattedDate}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex gap-2">
-                <CopyButton text={fileContent} ariaLabel="Copy file content" />
-                <ViewToggleButton />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-0">
-                <ViewToggleContent content={fileContent} framedContent={framedContent} />
-              </CardContent>
-            </Card>
-          </ViewToggleProvider>
-          <div className="flex gap-2 mt-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">← Root</Button>
-            </Link>
-            {pathSegments.length > 1 && (
-              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
-                <Button variant="outline" size="sm">↑ Up</Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // No exact match found, check for child routes
+  // Check for child routes regardless of whether we have an exact match
   const routePrefix = route.length > 0 ? (route.endsWith('/') ? route : `${route}/`) : '';
 
   // Fetch all child routes using pagination (cached)
@@ -178,35 +103,84 @@ export default async function PreviewPage({ params }: PageProps) {
     offset += pageSize;
   }
 
-  if (childRoutes && childRoutes.length > 0) {
-    // Filter to get only immediate children, not nested grandchildren
-    const immediateChildren = new Map<string, { route: string; file_name: string | null }>();
+  // Filter to get only immediate children, not nested grandchildren
+  const immediateChildren = new Map<string, { route: string; file_name: string | null; hasChildren: boolean }>();
 
-    childRoutes.forEach((child) => {
-      // Skip the exact route if it exists (already handled above)
-      if (child.route === route) return;
+  childRoutes.forEach((child) => {
+    // Skip the exact route if it exists (we'll display it separately)
+    if (child.route === route) return;
 
-      const relativePath = routePrefix ? child.route.substring(routePrefix.length) : child.route;
-      const firstSegment = relativePath.split('/')[0];
+    const relativePath = routePrefix ? child.route.substring(routePrefix.length) : child.route;
+    const firstSegment = relativePath.split('/')[0];
 
-      if (!immediateChildren.has(firstSegment)) {
-        // Check if this is a direct file or a directory
-        const isDirectFile = child.route === `${routePrefix}${firstSegment}`;
-        immediateChildren.set(firstSegment, {
-          route: `${routePrefix}${firstSegment}`,
-          file_name: isDirectFile ? child.file_name : null,
-        });
+    const isDirectFile = child.route === `${routePrefix}${firstSegment}`;
+    const hasNestedChildren = relativePath.includes('/');
+
+    if (!immediateChildren.has(firstSegment)) {
+      immediateChildren.set(firstSegment, {
+        route: `${routePrefix}${firstSegment}`,
+        file_name: isDirectFile ? child.file_name : null,
+        hasChildren: hasNestedChildren,
+      });
+    } else {
+      // If we already have this entry, update it if we find it has children
+      const existing = immediateChildren.get(firstSegment)!;
+      if (hasNestedChildren) {
+        existing.hasChildren = true;
       }
-    });
+    }
+  });
 
-    const sortedChildren = Array.from(immediateChildren.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0])
+  // If exact match found, display the file content
+  if (!indexError && indexData) {
+    const filePath = `${indexData.file_id}/${indexData.file_name}`;
+    const { data: fileData, error: fileError } = await WikiService.getCachedFileContent(filePath);
+
+    if (fileError || !fileData) {
+    return (
+      <div className="preview-container">
+        <div className="preview-content">
+          <ActionLinks />
+          <div className="mb-4">
+            <Link href="/">
+              <Button variant="secondary" size="sm">← Root</Button>
+            </Link>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Error</CardTitle>
+              <CardDescription>File could not be retrieved: {fileError?.message || 'Unknown error'}</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
     );
+    }
+
+    // fileData is now a string (already converted from Blob in the cache layer)
+    const fileContent = fileData;
+    const framedContent = wrapInAsciiFrame(fileContent, 96);
+    const formattedDate = new Date(indexData.updated_at).toLocaleDateString();
+
+    // Check if we also have children to display
+    const hasChildren = immediateChildren.size > 0;
+
+    // Check if at root and prepare children display
+    const isRootRoute = route.length === 0;
+    const sortedChildren = Array.from(immediateChildren.entries()).sort((a, b) => {
+      // Sort directories before files (has children = directory)
+      const aIsDir = a[1].hasChildren;
+      const bIsDir = b[1].hasChildren;
+      if (aIsDir && !bIsDir) return -1;
+      if (!aIsDir && bIsDir) return 1;
+      // Then sort alphabetically
+      return a[0].localeCompare(b[0]);
+    });
+    const displayChildren = isRootRoute ? sortedChildren.slice(0, 15) : sortedChildren;
 
     // If we're at the root, also show recently added files (cached)
-    const isRootRoute = route.length === 0;
     let recentFiles = null;
-    if (isRootRoute) {
+    if (isRootRoute && hasChildren) {
       const { data } = await WikiService.getCachedRecentFiles();
       recentFiles = data;
     }
@@ -216,14 +190,132 @@ export default async function PreviewPage({ params }: PageProps) {
         <div className="preview-content">
           <ActionLinks />
           <div className="flex gap-2 mb-4">
+            <Link href="/">
+              <Button variant="secondary" size="sm">← Root</Button>
+            </Link>
+            {pathSegments.length > 1 && (
+              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
+                <Button variant="secondary" size="sm">↑ Up</Button>
+              </Link>
+            )}
+          </div>
+          <ViewToggleProvider content={fileContent} framedContent={framedContent}>
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>{hasChildren ? '📁' : '📄'} {route || 'Root'}</CardTitle>
+                <CardDescription>
+                  File: {indexData.file_name} | Updated: {formattedDate}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <CopyButton text={fileContent} ariaLabel="Copy file content" />
+                <ViewToggleButton />
+              </CardContent>
+            </Card>
+            <Card className={hasChildren ? "mb-4" : ""}>
+              <CardContent className="p-0">
+                <ViewToggleContent content={fileContent} framedContent={framedContent} />
+              </CardContent>
+            </Card>
+          </ViewToggleProvider>
+          {hasChildren && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>📁 Children</CardTitle>
+                <CardDescription>Directory listing - {displayChildren.length} item(s){isRootRoute && sortedChildren.length > 15 ? ` (showing first 15 of ${sortedChildren.length})` : ''}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {displayChildren.map(([name, info]) => {
+                    const icon = info.hasChildren ? '📁' : '📄';
+                    const fileName = info.file_name ? ` (${info.file_name})` : '';
+                    return (
+                      <div key={name} className="flex flex-wrap items-center gap-2 break-words">
+                        <span className="flex-shrink-0">{icon}</span>
+                        <Link href={`/${info.route}`} className="hover:underline break-all">
+                          {name}{fileName}
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {recentFiles && recentFiles.length > 0 && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>📅 Recently Added</CardTitle>
+                <CardDescription>Last 20 updated files</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentFiles.map(file => {
+                    const date = new Date(file.updated_at).toLocaleDateString();
+                    return (
+                      <div key={file.route} className="flex flex-wrap items-center gap-2 text-sm break-words">
+                        <Link href={`/${file.route}`} className="hover:underline break-all">
+                          {file.route}
+                        </Link>
+                        <span className="text-muted-foreground break-words">- {file.file_name} ({date})</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          <div className="flex gap-2 mt-4">
+            <Link href="/">
+              <Button variant="secondary" size="sm">← Root</Button>
+            </Link>
+            {pathSegments.length > 1 && (
+              <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
+                <Button variant="secondary" size="sm">↑ Up</Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If we only have children (no file content), display directory view
+  if (immediateChildren.size > 0) {
+    const sortedChildren = Array.from(immediateChildren.entries()).sort((a, b) => {
+      // Sort directories before files (has children = directory)
+      const aIsDir = a[1].hasChildren;
+      const bIsDir = b[1].hasChildren;
+      if (aIsDir && !bIsDir) return -1;
+      if (!aIsDir && bIsDir) return 1;
+      // Then sort alphabetically
+      return a[0].localeCompare(b[0]);
+    });
+
+    // If we're at the root, also show recently added files (cached)
+    const isRootRoute = route.length === 0;
+    let recentFiles = null;
+    if (isRootRoute) {
+      const { data } = await WikiService.getCachedRecentFiles();
+      recentFiles = data;
+    }
+
+    // Limit to 15 items at root
+    const displayChildren = isRootRoute ? sortedChildren.slice(0, 15) : sortedChildren;
+
+    return (
+      <div className="preview-container">
+        <div className="preview-content">
+          <ActionLinks />
+          <div className="flex gap-2 mb-4">
             {route.length > 0 && (
               <>
                 <Link href="/">
-                  <Button variant="outline" size="sm">← Root</Button>
+                  <Button variant="secondary" size="sm">← Root</Button>
                 </Link>
                 {pathSegments.length > 1 && (
                   <Link href={`/${pathSegments.slice(0, -1).join('/')}`}>
-                    <Button variant="outline" size="sm">↑ Up</Button>
+                    <Button variant="secondary" size="sm">↑ Up</Button>
                   </Link>
                 )}
               </>
@@ -232,12 +324,12 @@ export default async function PreviewPage({ params }: PageProps) {
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>📁 {route || 'AI WIKI - ROOT'}</CardTitle>
-              <CardDescription>Directory listing - {sortedChildren.length} item(s)</CardDescription>
+              <CardDescription>Directory listing - {displayChildren.length} item(s){isRootRoute && sortedChildren.length > 15 ? ` (showing first 15 of ${sortedChildren.length})` : ''}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {sortedChildren.map(([name, info]) => {
-                  const icon = info.file_name ? '📄' : '📁';
+                {displayChildren.map(([name, info]) => {
+                  const icon = info.hasChildren ? '📁' : '📄';
                   const fileName = info.file_name ? ` (${info.file_name})` : '';
                   return (
                     <div key={name} className="flex flex-wrap items-center gap-2 break-words">
@@ -286,7 +378,7 @@ export default async function PreviewPage({ params }: PageProps) {
         <ActionLinks />
         <div className="mb-4">
           <Link href="/">
-            <Button variant="outline" size="sm">← Root</Button>
+            <Button variant="secondary" size="sm">← Root</Button>
           </Link>
         </div>
         <Card>

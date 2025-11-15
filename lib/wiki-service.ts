@@ -68,19 +68,34 @@ function getRouteVariants(searchRoute: string): string[] {
 }
 
 // Cached functions for better performance between tabs
+// Uses stale-while-revalidate pattern: serves cached data immediately, revalidates in background
 const cachedGetIndexData = unstable_cache(async (route: string) => {
   return await supabase
     .from('wiki_files_index')
     .select('file_id, file_name, route, updated_at')
     .eq('route', route)
     .single();
-}, ['get-index-data']);
+}, ['get-index-data'], {
+  tags: ['wiki-index'],
+  revalidate: 1, // Revalidate frequently in background
+});
 
 const cachedDownloadFile = unstable_cache(async (filePath: string) => {
-  return await supabase.storage
+  const { data, error } = await supabase.storage
     .from('ai-wiki-storage')
     .download(filePath);
-}, ['download-file']);
+
+  if (error || !data) {
+    return { data: null, error };
+  }
+
+  // Convert Blob to text immediately since Blob doesn't serialize well in cache
+  const text = await data.text();
+  return { data: text, error: null };
+}, ['download-file'], {
+  tags: ['wiki-files'],
+  revalidate: 1, // Revalidate frequently in background
+});
 
 const cachedGetChildRoutes = unstable_cache(async (routePrefix: string, offset: number, pageSize: number) => {
   return await supabase
@@ -89,7 +104,10 @@ const cachedGetChildRoutes = unstable_cache(async (routePrefix: string, offset: 
     .like('route', routePrefix ? `${routePrefix}%` : '%')
     .order('route')
     .range(offset, offset + pageSize - 1);
-}, ['get-child-routes']);
+}, ['get-child-routes'], {
+  tags: ['wiki-children'],
+  revalidate: 1, // Revalidate frequently in background
+});
 
 const cachedGetRecentFiles = unstable_cache(async () => {
   return await supabase
@@ -97,7 +115,10 @@ const cachedGetRecentFiles = unstable_cache(async () => {
     .select('route, file_name, updated_at')
     .order('updated_at', { ascending: false })
     .limit(20);
-}, ['get-recent-files']);
+}, ['get-recent-files'], {
+  tags: ['wiki-recent'],
+  revalidate: 1, // Revalidate frequently in background
+});
 
 export class WikiService {
   /**
