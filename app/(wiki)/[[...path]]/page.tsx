@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { WikiService } from '@/lib/wiki-service';
 import { AddToClaudeCode } from '@/components/add-to-claude-code';
 import { AddToCursor } from '@/components/add-to-cursor';
+import { AddToCodex } from '@/components/add-to-codex';
 
 // Enable revalidation on page refresh while serving stale content
 export const revalidate = 0;
@@ -56,6 +57,7 @@ export default async function PreviewPage({ params }: PageProps) {
             <Button variant="secondary" size="sm">🔑 API Keys</Button>
           </Link>
           <AddToClaudeCode />
+          <AddToCodex />
           <AddToCursor />
         </>
       ) : (
