@@ -11,6 +11,7 @@ import { WikiService } from '@/lib/wiki-service';
 import { AddToClaudeCode } from '@/components/add-to-claude-code';
 import { AddToCursor } from '@/components/add-to-cursor';
 import { AddToCodex } from '@/components/add-to-codex';
+import { AsciiShader } from '@/components/ascii-shader';
 
 // Enable revalidation on page refresh while serving stale content
 export const revalidate = 0;
@@ -336,19 +337,28 @@ export default async function PreviewPage({ params }: PageProps) {
               <CardDescription>Directory listing - {displayChildren.length} item(s){isRootRoute && sortedChildren.length > 15 ? ` (showing first 15 of ${sortedChildren.length})` : ''}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {displayChildren.map(([name, info]) => {
-                  const icon = info.hasChildren ? '📁' : '📄';
-                  const fileName = info.file_name ? ` (${info.file_name})` : '';
-                  return (
-                    <div key={name} className="flex flex-wrap items-center gap-2 break-words">
-                      <span className="flex-shrink-0">{icon}</span>
-                      <Link href={`/${info.route}`} className="hover:underline break-all">
-                        {name}{fileName}
-                      </Link>
+              <div className={isRootRoute ? "flex gap-8 items-start" : ""}>
+                <div className={isRootRoute ? "flex-1 space-y-2 min-w-0" : "space-y-2"}>
+                  {displayChildren.map(([name, info]) => {
+                    const icon = info.hasChildren ? '📁' : '📄';
+                    const fileName = info.file_name ? ` (${info.file_name})` : '';
+                    return (
+                      <div key={name} className="flex flex-wrap items-center gap-2 break-words">
+                        <span className="flex-shrink-0">{icon}</span>
+                        <Link href={`/${info.route}`} className="hover:underline break-all">
+                          {name}{fileName}
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+                {isRootRoute && (
+                  <div className="w-[600px] flex-shrink-0">
+                    <div className="aspect-square">
+                      <AsciiShader />
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
