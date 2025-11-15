@@ -103,7 +103,7 @@ export function ApiKeyManager() {
     await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api-keys`,
+        redirectTo: `${window.location.origin}/`,
       },
     });
   };
