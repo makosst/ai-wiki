@@ -9,7 +9,7 @@ const handler = createMcpHandler(
     const singleContributionSchema = z.object({
       fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
       content: z.string().describe('The file content as a string'),
-      route: z.string().describe('The route path for this content (e.g., "ui/shadcn/installation", "backend/nodejs/express")'),
+      route: z.string().describe('The route path for this content (e.g., "shadcn/installation", "backend/nodejs/express")'),
       contentType: z
         .string()
         .optional()
@@ -57,7 +57,7 @@ const handler = createMcpHandler(
       'read',
       'Read content from the AI wiki by route path. Always start with reading by the library name. Use the .md when trying to read concrete content.',
       {
-        route: z.string().describe('The route path to read (e.g., "ui/shadcn/installation") or search terms'),
+        route: z.string().describe('The route path to read (e.g., "shadcn/installation") or search terms'),
       },
       async ({ route }, extra) => {
         const result = await WikiService.read(route);

@@ -28,7 +28,7 @@ Map an uploaded file to a route path in the wiki.
 
 **Parameters:**
 - `fileId` (string): The file ID from the upload tool
-- `route` (string): The route path (e.g., "ui/shadcn/installation")
+- `route` (string): The route path (e.g., "shadcn/installation")
 - `fileName` (string): The original file name for reference
 
 **Returns:** Success message with the route mapping
@@ -37,7 +37,7 @@ Map an uploaded file to a route path in the wiki.
 ```json
 {
   "fileId": "abc-123-def-456",
-  "route": "ui/shadcn/installation",
+  "route": "shadcn/installation",
   "fileName": "shadcn-installation.md"
 }
 ```
@@ -55,7 +55,7 @@ Read content by route path or search for content.
 **Example:**
 ```json
 {
-  "route": "ui/shadcn/installation"
+  "route": "shadcn/installation"
 }
 ```
 
@@ -74,7 +74,7 @@ Read content by route path or search for content.
    ```
    Tool: contribute
    - fileId: <from-upload-response>
-   - route: "ui/shadcn/installation"
+   - route: "shadcn/installation"
    - fileName: "shadcn-guide.md"
    ```
 
@@ -83,7 +83,7 @@ Read content by route path or search for content.
 1. **By exact route:**
    ```
    Tool: read
-   - route: "ui/shadcn/installation"
+   - route: "shadcn/installation"
    ```
 
 2. **By search:**
@@ -100,7 +100,7 @@ The MCP server is available at: `/api/mcp`
 ## Route Structure
 
 Routes are hierarchical paths like file systems:
-- `ui/shadcn/installation`
+- `shadcn/installation`
 - `ui/shadcn/components`
 - `backend/supabase/auth`
 - `backend/nodejs/express`

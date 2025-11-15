@@ -6,9 +6,10 @@ import { Button } from '@/components/retroui/Button';
 interface CopyButtonProps {
   text: string;
   ariaLabel?: string;
+  size?: 'sm' | 'md' | 'lg' | 'icon';
 }
 
-export function CopyButton({ text, ariaLabel = 'Copy content' }: CopyButtonProps) {
+export function CopyButton({ text, ariaLabel = 'Copy content', size = 'sm' }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,7 +42,7 @@ export function CopyButton({ text, ariaLabel = 'Copy content' }: CopyButtonProps
       aria-live="polite"
       aria-label={ariaLabel}
       variant="outline"
-      size="sm"
+      size={size}
     >
       {copied ? 'Copied!' : 'Copy'}
     </Button>

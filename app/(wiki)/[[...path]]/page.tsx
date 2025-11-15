@@ -8,12 +8,11 @@ import { Text } from '@/components/retroui/Text';
 import { Button } from '@/components/retroui/Button';
 import Link from 'next/link';
 import { WikiService } from '@/lib/wiki-service';
+import { AddToClaudeCode } from '@/components/add-to-claude-code';
+import { AddToCursor } from '@/components/add-to-cursor';
 
 // Enable revalidation on page refresh while serving stale content
 export const revalidate = 0;
-
-const CURSOR_INSTALL_LINK =
-  'https://cursor.com/en-US/install-mcp?name=ai-wiki&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWktd2lraS1udS52ZXJjZWwuYXBwL2FwaS9tY3AiLCJoZWFkZXJzIjp7IkFJV0lLSV9BUElfS0VZIjoiWU9VUl9BUElfS0VZIn19';
 
 interface PageProps {
   params: Promise<{
@@ -45,13 +44,9 @@ export default async function PreviewPage({ params }: PageProps) {
   const loginCookie = cookieStore.get('aiwiki_logged_in')?.value;
   let isLoggedIn = loginCookie === '1';
 
-  const accessToken = cookieStore.get('sb-access-token')?.value;
-  if (!isLoggedIn && accessToken) {
-    const { data, error } = await supabase.auth.getUser(accessToken);
-    if (!error && data?.user) {
-      isLoggedIn = true;
-    }
-  }
+  // Detect if running locally
+  const isLocal = process.env.NODE_ENV === 'development';
+  const baseUrl = isLocal ? 'http://localhost:3000' : 'https://ai-wiki-nu.vercel.app';
 
   const ActionLinks = () => (
     <div className="flex gap-2 mb-4 flex-wrap">
@@ -60,18 +55,30 @@ export default async function PreviewPage({ params }: PageProps) {
           <Link href="/api-keys">
             <Button variant="secondary" size="sm">🔑 API Keys</Button>
           </Link>
-          <a href={CURSOR_INSTALL_LINK} target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary" size="sm">➕ Add to Cursor</Button>
-          </a>
+          <AddToClaudeCode />
+          <AddToCursor />
         </>
       ) : (
         <>
-          <Link href="/login?mode=signup">
-            <Button variant="secondary" size="sm">📝 Sign Up</Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="secondary" size="sm">🔐 Log In</Button>
-          </Link>
+          {isLocal ? (
+            <>
+              <a href={`${baseUrl}/login?mode=signup`}>
+                <Button variant="secondary" size="sm">📝 Sign Up</Button>
+              </a>
+              <a href={`${baseUrl}/login`}>
+                <Button variant="secondary" size="sm">🔐 Log In</Button>
+              </a>
+            </>
+          ) : (
+            <>
+              <Link href="/login?mode=signup">
+                <Button variant="secondary" size="sm">📝 Sign Up</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="secondary" size="sm">🔐 Log In</Button>
+              </Link>
+            </>
+          )}
         </>
       )}
     </div>

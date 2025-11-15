@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 const singleContributionSchema = z.object({
   fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
   content: z.string().describe('The file content as a string'),
-  route: z.string().describe('The route path for this content (e.g., "ui/shadcn/installation")'),
+  route: z.string().describe('The route path for this content (e.g., "shadcn/installation")'),
   contentType: z
     .string()
     .optional()
