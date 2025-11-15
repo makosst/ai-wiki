@@ -99,7 +99,7 @@ const handler = createMcpHandler(
             content: [
               {
                 type: 'text',
-                text: `# ${route}\n\nNo file exists at this route, but found ${result.childRoutes.length} child route(s):\n\n${childList}\n\nUse the exact route path with the 'read' tool to view content.`,
+                text: `# ${route}\n\nThis is a directory, found ${result.childRoutes.length} child route(s):\n\n${childList}\n\nUse the exact route path with the 'read' tool to view content.`,
               },
             ],
           };
