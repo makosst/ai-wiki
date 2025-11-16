@@ -145,7 +145,7 @@ async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
 
   if (!apiKey) {
     const url = new URL(req.url);
-    apiKey = url.searchParams.get('api_key') || url.searchParams.get('aiwiki_api_key');
+    apiKey = url.searchParams.get('key') || url.searchParams.get('api_key') || url.searchParams.get('aiwiki_api_key');
   }
 
   if (!apiKey) {
@@ -204,7 +204,7 @@ async function authenticatedHandler(req: Request) {
     return NextResponse.json(
       {
         error: 'Unauthorized',
-        message: 'Invalid or missing API key. Please provide a valid API key in the aiwiki_api_key header or as a query parameter (?api_key=xxx).'
+        message: 'Invalid or missing API key. Please provide a valid API key in the aiwiki_api_key header or as a query parameter (?key=xxx, ?api_key=xxx, or ?aiwiki_api_key=xxx).'
       },
       { status: 401 }
     );
