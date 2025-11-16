@@ -11,6 +11,7 @@ import { WikiService } from '@/lib/wiki-service';
 import { AddToClaudeCode } from '@/components/add-to-claude-code';
 import { AddToCursor } from '@/components/add-to-cursor';
 import { AddToCodex } from '@/components/add-to-codex';
+import { Pagination } from '@/components/pagination';
 
 // Enable revalidation on page refresh while serving stale content
 export const revalidate = 0;
@@ -18,6 +19,9 @@ export const revalidate = 0;
 interface PageProps {
   params: Promise<{
     path?: string[];
+  }>;
+  searchParams: Promise<{
+    page?: string;
   }>;
 }
 
@@ -36,10 +40,13 @@ function createAsciiHeader(title: string): string {
   return `# ${title}`;
 }
 
-export default async function PreviewPage({ params }: PageProps) {
+export default async function PreviewPage({ params, searchParams }: PageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const pathSegments = resolvedParams.path || [];
   const route = pathSegments.join('/');
+  const currentPage = parseInt(resolvedSearchParams.page || '1', 10);
+  const itemsPerPage = 15;
 
   const cookieStore = await cookies();
   const loginCookie = cookieStore.get('aiwiki_logged_in')?.value;
@@ -185,7 +192,13 @@ export default async function PreviewPage({ params }: PageProps) {
       // Then sort alphabetically
       return a[0].localeCompare(b[0]);
     });
-    const displayChildren = isRootRoute ? sortedChildren.slice(0, 15) : sortedChildren;
+
+    // Pagination logic
+    const totalItems = sortedChildren.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const displayChildren = isRootRoute ? sortedChildren.slice(startIndex, endIndex) : sortedChildren;
 
     // If we're at the root, also show recently added files (cached)
     let recentFiles = null;
@@ -231,10 +244,13 @@ export default async function PreviewPage({ params }: PageProps) {
             <Card className="mb-4">
               <CardHeader>
                 <CardTitle>📁 Children</CardTitle>
-                <CardDescription>Directory listing - {displayChildren.length} item(s){isRootRoute && sortedChildren.length > 15 ? ` (showing first 15 of ${sortedChildren.length})` : ''}</CardDescription>
+                <CardDescription>
+                  Directory listing - {totalItems} item(s) total
+                  {isRootRoute && totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className={`space-y-2 ${isRootRoute ? 'min-h-[480px]' : ''}`}>
                   {displayChildren.map(([name, info]) => {
                     const icon = info.hasChildren ? '📁' : '📄';
                     const fileName = info.file_name ? ` (${info.file_name})` : '';
@@ -248,6 +264,13 @@ export default async function PreviewPage({ params }: PageProps) {
                     );
                   })}
                 </div>
+                {isRootRoute && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    baseRoute={`/${route}`}
+                  />
+                )}
               </CardContent>
             </Card>
           )}
@@ -309,8 +332,12 @@ export default async function PreviewPage({ params }: PageProps) {
       recentFiles = data;
     }
 
-    // Limit to 15 items at root
-    const displayChildren = isRootRoute ? sortedChildren.slice(0, 15) : sortedChildren;
+    // Pagination logic
+    const totalItems = sortedChildren.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const displayChildren = isRootRoute ? sortedChildren.slice(startIndex, endIndex) : sortedChildren;
 
     return (
       <div className="preview-container">
@@ -333,10 +360,13 @@ export default async function PreviewPage({ params }: PageProps) {
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>📁 {route || 'AI WIKI - ROOT'}</CardTitle>
-              <CardDescription>Directory listing - {displayChildren.length} item(s){isRootRoute && sortedChildren.length > 15 ? ` (showing first 15 of ${sortedChildren.length})` : ''}</CardDescription>
+              <CardDescription>
+                Directory listing - {totalItems} item(s) total
+                {isRootRoute && totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className={`space-y-2 ${isRootRoute ? 'min-h-[480px]' : ''}`}>
                 {displayChildren.map(([name, info]) => {
                   const icon = info.hasChildren ? '📁' : '📄';
                   const fileName = info.file_name ? ` (${info.file_name})` : '';
@@ -350,6 +380,13 @@ export default async function PreviewPage({ params }: PageProps) {
                   );
                 })}
               </div>
+              {isRootRoute && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  baseRoute={`/${route}`}
+                />
+              )}
             </CardContent>
           </Card>
           {recentFiles && recentFiles.length > 0 && (
