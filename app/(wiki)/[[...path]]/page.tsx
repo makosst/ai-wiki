@@ -198,7 +198,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const displayChildren = isRootRoute ? sortedChildren.slice(startIndex, endIndex) : sortedChildren;
+    const displayChildren = sortedChildren.slice(startIndex, endIndex);
 
     // If we're at the root, also show recently added files (cached)
     let recentFiles = null;
@@ -246,11 +246,11 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
                 <CardTitle>📁 Children</CardTitle>
                 <CardDescription>
                   Directory listing - {totalItems} item(s) total
-                  {isRootRoute && totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
+                  {totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className={`space-y-2 ${isRootRoute ? 'min-h-[480px]' : ''}`}>
+                <div className="space-y-2 min-h-[480px]">
                   {displayChildren.map(([name, info]) => {
                     const icon = info.hasChildren ? '📁' : '📄';
                     const fileName = info.file_name ? ` (${info.file_name})` : '';
@@ -264,13 +264,11 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
                     );
                   })}
                 </div>
-                {isRootRoute && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    baseRoute={`/${route}`}
-                  />
-                )}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  baseRoute={`/${route}`}
+                />
               </CardContent>
             </Card>
           )}
@@ -337,7 +335,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const displayChildren = isRootRoute ? sortedChildren.slice(startIndex, endIndex) : sortedChildren;
+    const displayChildren = sortedChildren.slice(startIndex, endIndex);
 
     return (
       <div className="preview-container">
@@ -362,11 +360,11 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
               <CardTitle>📁 {route || 'AI WIKI - ROOT'}</CardTitle>
               <CardDescription>
                 Directory listing - {totalItems} item(s) total
-                {isRootRoute && totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
+                {totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className={`space-y-2 ${isRootRoute ? 'min-h-[480px]' : ''}`}>
+              <div className="space-y-2 min-h-[480px]">
                 {displayChildren.map(([name, info]) => {
                   const icon = info.hasChildren ? '📁' : '📄';
                   const fileName = info.file_name ? ` (${info.file_name})` : '';
@@ -380,13 +378,11 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
                   );
                 })}
               </div>
-              {isRootRoute && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  baseRoute={`/${route}`}
-                />
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                baseRoute={`/${route}`}
+              />
             </CardContent>
           </Card>
           {recentFiles && recentFiles.length > 0 && (
