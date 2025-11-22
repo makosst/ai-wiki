@@ -1,11 +1,18 @@
 import { z } from 'zod';
 import { createMcpHandler } from 'mcp-handler';
 import { WikiService } from '@/lib/wiki-service';
+import { WorkflowService, createWorkflowSchema, updateWorkflowSchema } from '@/lib/workflow-service';
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 const handler = createMcpHandler(
   (server) => {
+    // Get user_id from context (set during authentication)
+    const getUserId = (extra: any): string => {
+      // The extra parameter contains the request object
+      const req = extra?.request as Request;
+      return req?.headers?.get('x-user-id') || '';
+    };
     const singleContributionSchema = z.object({
       fileName: z.string().describe('The name of the file (e.g., "shadcn-guide.md")'),
       content: z.string().describe('The file content as a string'),
@@ -133,13 +140,219 @@ const handler = createMcpHandler(
         };
       },
     );
+
+    // Workflow tools
+    server.tool(
+      'list_workflows',
+      'List all workflows for the authenticated user',
+      {},
+      async (params, extra) => {
+        const userId = getUserId(extra);
+        if (!userId) {
+          return {
+            content: [{ type: 'text', text: 'User not authenticated' }],
+            isError: true,
+          };
+        }
+
+        const result = await WorkflowService.list(userId);
+
+        if (!result.success) {
+          return {
+            content: [{ type: 'text', text: `Error: ${result.error}` }],
+            isError: true,
+          };
+        }
+
+        if (!result.workflows || result.workflows.length === 0) {
+          return {
+            content: [{ type: 'text', text: 'No workflows found. Create your first workflow!' }],
+          };
+        }
+
+        const workflowList = result.workflows
+          .map((w) => `- ${w.name} (ID: ${w.id})\n  ${w.description || 'No description'}\n  Updated: ${new Date(w.updated_at).toLocaleString()}`)
+          .join('\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Found ${result.workflows.length} workflow(s):\n\n${workflowList}`,
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      'get_workflow',
+      'Get a specific workflow by ID',
+      {
+        id: z.string().uuid().describe('The workflow ID'),
+      },
+      async ({ id }, extra) => {
+        const userId = getUserId(extra);
+        if (!userId) {
+          return {
+            content: [{ type: 'text', text: 'User not authenticated' }],
+            isError: true,
+          };
+        }
+
+        const result = await WorkflowService.get(id, userId);
+
+        if (!result.success) {
+          return {
+            content: [{ type: 'text', text: `Error: ${result.error}` }],
+            isError: true,
+          };
+        }
+
+        const workflow = result.workflow!;
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(workflow, null, 2),
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      'create_workflow',
+      'Create a new workflow',
+      {
+        name: z.string().min(1).describe('Name of the workflow'),
+        description: z.string().optional().describe('Optional description'),
+        workflow_data: z.object({
+          nodes: z.array(z.any()).describe('Array of nodes'),
+          edges: z.array(z.any()).describe('Array of edges'),
+          viewport: z.object({
+            x: z.number(),
+            y: z.number(),
+            zoom: z.number(),
+          }).optional().describe('Viewport settings'),
+        }).describe('ReactFlow graph data'),
+      },
+      async (params, extra) => {
+        const userId = getUserId(extra);
+        if (!userId) {
+          return {
+            content: [{ type: 'text', text: 'User not authenticated' }],
+            isError: true,
+          };
+        }
+
+        const result = await WorkflowService.create(userId, params);
+
+        if (!result.success) {
+          return {
+            content: [{ type: 'text', text: `Error: ${result.error}` }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Successfully created workflow "${result.workflow!.name}" (ID: ${result.workflow!.id})`,
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      'update_workflow',
+      'Update an existing workflow',
+      {
+        id: z.string().uuid().describe('The workflow ID to update'),
+        name: z.string().min(1).optional().describe('New name'),
+        description: z.string().optional().describe('New description'),
+        workflow_data: z.object({
+          nodes: z.array(z.any()),
+          edges: z.array(z.any()),
+          viewport: z.object({
+            x: z.number(),
+            y: z.number(),
+            zoom: z.number(),
+          }).optional(),
+        }).optional().describe('Updated ReactFlow graph data'),
+      },
+      async (params, extra) => {
+        const userId = getUserId(extra);
+        if (!userId) {
+          return {
+            content: [{ type: 'text', text: 'User not authenticated' }],
+            isError: true,
+          };
+        }
+
+        const result = await WorkflowService.update(userId, params);
+
+        if (!result.success) {
+          return {
+            content: [{ type: 'text', text: `Error: ${result.error}` }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Successfully updated workflow "${result.workflow!.name}" (ID: ${result.workflow!.id})`,
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      'delete_workflow',
+      'Delete a workflow',
+      {
+        id: z.string().uuid().describe('The workflow ID to delete'),
+      },
+      async ({ id }, extra) => {
+        const userId = getUserId(extra);
+        if (!userId) {
+          return {
+            content: [{ type: 'text', text: 'User not authenticated' }],
+            isError: true,
+          };
+        }
+
+        const result = await WorkflowService.delete(id, userId);
+
+        if (!result.success) {
+          return {
+            content: [{ type: 'text', text: `Error: ${result.error}` }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Successfully deleted workflow (ID: ${id})`,
+            },
+          ],
+        };
+      },
+    );
   },
   {},
   { basePath: '/api' },
 );
 
 // Validate API key from request without consuming the body
-async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
+async function validateApiKeyFromRequest(req: Request): Promise<{ valid: boolean; userId?: string }> {
   // Get API key from header or query parameter
   let apiKey = req.headers.get('aiwiki_api_key');
 
@@ -150,7 +363,7 @@ async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
 
   if (!apiKey) {
     console.log('[MCP Auth] No API key provided');
-    return false;
+    return { valid: false };
   }
 
   console.log('[MCP Auth] Validating API key:', apiKey.substring(0, 20) + '...');
@@ -165,12 +378,12 @@ async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
 
   if (error) {
     console.log('[MCP Auth] Database error:', error);
-    return false;
+    return { valid: false };
   }
 
   if (!data) {
     console.log('[MCP Auth] No matching API key found');
-    return false;
+    return { valid: false };
   }
 
   console.log('[MCP Auth] Valid API key found for user:', data.user_id);
@@ -181,7 +394,7 @@ async function validateApiKeyFromRequest(req: Request): Promise<boolean> {
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', data.id);
 
-  return true;
+  return { valid: true, userId: data.user_id };
 }
 
 // Wrap the handler with authentication
@@ -198,9 +411,9 @@ async function authenticatedHandler(req: Request) {
     });
   }
 
-  const isValid = await validateApiKeyFromRequest(req);
+  const authResult = await validateApiKeyFromRequest(req);
 
-  if (!isValid) {
+  if (!authResult.valid) {
     return NextResponse.json(
       {
         error: 'Unauthorized',
@@ -210,7 +423,13 @@ async function authenticatedHandler(req: Request) {
     );
   }
 
-  return handler(req);
+  // Clone the request and add user_id to headers for handler context
+  const headers = new Headers(req.headers);
+  headers.set('x-user-id', authResult.userId || '');
+
+  const modifiedReq = new Request(req, { headers });
+
+  return handler(modifiedReq);
 }
 
 export {
